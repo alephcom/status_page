@@ -94,6 +94,10 @@ h3 { font-size: 1rem; }
 .form input[type=email] { display: block; width: 100%; padding: .5rem .6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; margin-top: .25rem; }
 .form button { align-self: flex-start; padding: .5rem 1.1rem; border: 0; border-radius: 6px; background: var(--maint); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
 .form button.secondary { background: var(--muted); }
+.form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.form button.google { display: inline-flex; align-items: center; gap: .5rem; background: #fff; color: #1f1f1f; border: 1px solid #747775; font-weight: 500; }
+.form button.google svg { width: 18px; height: 18px; }
+.notice.is-error { border-left-color: var(--major); }
 .checkboxes { border: 1px solid var(--border); border-radius: 6px; padding: .5rem .9rem; }
 .checkboxes label { display: block; }
 .group-label { font-weight: 600; margin: .5rem 0 .1rem; }

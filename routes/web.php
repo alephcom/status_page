@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
@@ -15,3 +16,7 @@ Route::get('/subscription/{subscriber}', [SubscriptionController::class, 'show']
 Route::put('/subscription/{subscriber}', [SubscriptionController::class, 'update'])->name('subscription.update');
 Route::delete('/subscription/{subscriber}', [SubscriptionController::class, 'destroy'])->name('subscription.destroy');
 Route::get('/subscription/{subscriber}/verify', [SubscriptionController::class, 'verify'])->name('subscription.verify');
+
+Route::post('/subscribe/google', [GoogleAuthController::class, 'subscribe'])->middleware('throttle:10,1')->name('subscribe.google');
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->middleware('throttle:20,1')->name('auth.google.callback');
+Route::get('/auth/google/{intent}', [GoogleAuthController::class, 'redirect'])->middleware('throttle:10,1')->name('auth.google');

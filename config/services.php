@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Google sign-in for subscribers and the admin panel. The redirect URI
+    // to register in Google Cloud Console is APP_URL/auth/google/callback.
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => '/auth/google/callback',
+    ],
+
 ];

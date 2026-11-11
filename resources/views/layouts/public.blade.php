@@ -22,6 +22,9 @@
     @if (session('status'))
         <div class="notice" role="status">{{ session('status') }}</div>
     @endif
+    @if (session('error'))
+        <div class="notice is-error" role="alert">{{ session('error') }}</div>
+    @endif
 
     @yield('content')
 

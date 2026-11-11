@@ -11,7 +11,8 @@ Inspired by [ChalmersLibrary/zabbix-public-statuspage](https://github.com/Chalme
 - **Planned maintenance** managed in the app. Affected components show "Under maintenance" during the window.
 - **Uptime history.** 90-day bars per component, computed from a local status-change log.
 - **Manual overrides** per component, with an optional expiry.
-- **Subscribers.** E-mail with double opt-in and per-component filtering. Also an Atom feed and signed webhooks.
+- **Subscribers.** E-mail with double opt-in and per-component filtering, or one-click sign-up with Google. Also an Atom feed and signed webhooks.
+- **Google sign-in** (optional) for subscribers and for admin panel staff.
 - **Admin panel** at `/admin`. Editors handle incidents and maintenance. Admins also manage components, users, webhooks, subscribers and settings.
 - **Read-only JSON API** at `/api/v1/{status,components,incidents,maintenances}`.
 - **MCP server** at `/mcp`, so AI assistants and agents can read status and manage incidents and maintenance. See [MCP server](#mcp-server).
@@ -118,6 +119,19 @@ Run the tests:
 ```bash
 php artisan test
 ```
+
+## Google sign-in
+
+Optional. When `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set, Google buttons appear; otherwise nothing changes.
+
+- **Subscribers:** "Subscribe with Google" on `/subscribe` creates a confirmed subscription straight away, since Google has verified the address. "Sign in with Google" opens an existing subscription. The e-mail link still works.
+- **Staff:** "Sign in with Google" on `/admin/login` signs in an existing admin or editor whose e-mail matches the Google account. It never creates admin accounts. Password login still works.
+- Subscribing with Google never signs anyone in to the admin panel.
+
+Setup in [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
+1. Configure the OAuth consent screen (user type "External" so anyone with a Google account can subscribe). Only the `openid` and `email` scopes are requested.
+2. Create an OAuth client ID of type "Web application" with the authorised redirect URI `<APP_URL>/auth/google/callback`.
+3. Put the client ID and secret in `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Make sure `APP_URL` matches the public URL.
 
 ## MCP server
 
