@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', $siteName)</title>
     <script>try { var t = localStorage.getItem('statuspage-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+    <meta name="theme-color" content="#c2e8f9">
+    <link rel="preload" href="{{ asset('fonts/inter-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="{{ asset('css/status.css') }}?v={{ filemtime(public_path('css/status.css')) }}">
     @if ($branding['color'])
         <style>:root { --brand: {{ $branding['color'] }}; }</style>
@@ -13,23 +15,31 @@
         <style>{!! str_ireplace('</style', '', $branding['css']) !!}</style>
     @endif
     <link rel="alternate" type="application/atom+xml" title="{{ $siteName }}" href="{{ route('feed') }}">
-    @if ($branding['logo'])<link rel="icon" href="{{ $branding['logo'] }}">@endif
+    @if ($branding['logo'])
+        <link rel="icon" href="{{ $branding['logo'] }}">
+    @else
+        <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
+        <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+        <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+    @endif
     @stack('head')
 </head>
 <body class="@yield('body-class')">
 <a class="skip" href="#main">{{ __('Skip to content') }}</a>
-<div class="wrap">
-    <header class="site-header">
+<header class="site-header">
+    <div class="wrap">
         <a class="site-name" href="{{ route('status') }}">
             @if ($branding['logo'])<img src="{{ $branding['logo'] }}" alt="" class="logo">@endif
             <span>{{ $siteName }}</span>
         </a>
         <nav aria-label="{{ __('Main') }}">
             <a href="{{ route('history') }}">{{ __('History') }}</a>
-            <a href="{{ route('subscribe') }}">{{ __('Subscribe') }}</a>
+            <a class="cta" href="{{ route('subscribe') }}">{{ __('Subscribe') }}</a>
         </nav>
-    </header>
+    </div>
+</header>
 
+<div class="wrap page">
     @if ($branding['announcement'])
         <div class="announcement is-{{ $branding['announcement_level'] }}" role="note">
             <div class="markdown">{!! Str::markdown($branding['announcement'], ['html_input' => 'escape', 'allow_unsafe_links' => false]) !!}</div>
