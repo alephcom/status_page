@@ -49,6 +49,8 @@ class ManageSettings extends Page
                 Section::make('Public page')->columns(2)->schema([
                     TextInput::make('site_name')->required()->maxLength(100),
                     TextInput::make('history_days')->label('Show resolved incidents for (days)')->numeric()->minValue(1)->maxValue(90)->required(),
+                    TextInput::make('logo_url')->label('Logo URL')->url()->maxLength(2048)
+                        ->helperText('Shown in the header instead of the site name. Leave empty to show the name.')->columnSpanFull(),
                     MarkdownEditor::make('site_about')->label('Introduction')->columnSpanFull(),
                     Repeater::make('external_links')->label('Other status pages')
                         ->schema([

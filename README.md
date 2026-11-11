@@ -85,6 +85,13 @@ docker compose exec app php artisan statuspage:make-admin you@example.com
 
 This starts four containers: the web app on :8080, a queue worker, the scheduler, and MariaDB. Put `APP_KEY`, the Zabbix settings and the mail settings in `.env`.
 
+## Branding
+
+- Set the site name and a logo URL under **Settings → Status page** in `/admin`.
+- Colours and type live in the custom properties at the top of `public/css/status.css`. There is no build step.
+- Replace `public/favicon.svg`, `public/favicon.ico` and `public/apple-touch-icon.png` with your own icons.
+- Inter is self-hosted from `public/fonts` under the SIL Open Font License.
+
 ## Development
 
 There's a mock Zabbix API with canned problems:

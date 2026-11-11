@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Component;
 use App\Models\Incident;
+use App\Models\Setting;
 use App\Services\StatusPoller;
 use App\Services\UptimeCalculator;
 use Database\Seeders\DemoSeeder;
@@ -36,6 +37,15 @@ class PublicPagesTest extends TestCase
 
         $this->get('/?view=compact')->assertOk()->assertSee('Website');
         $this->get('/?view=micro')->assertOk()->assertSee('Website');
+    }
+
+    public function test_header_shows_the_logo_when_one_is_set(): void
+    {
+        $this->get('/')->assertOk()->assertDontSee('<img', false);
+
+        Setting::put('logo_url', 'https://cdn.example.com/logo.png');
+
+        $this->get('/')->assertOk()->assertSee('<img src="https://cdn.example.com/logo.png" alt="Example Co. status">', false);
     }
 
     public function test_incident_history_feed_and_api(): void

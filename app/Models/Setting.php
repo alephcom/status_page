@@ -21,6 +21,7 @@ class Setting extends Model
 
     public const DEFAULTS = [
         'site_name' => 'Service status',
+        'logo_url' => null,
         'site_about' => null,
         'external_links' => [],
         'history_days' => 7,
