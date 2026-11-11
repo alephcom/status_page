@@ -34,6 +34,35 @@ Inspired by [ChalmersLibrary/zabbix-public-statuspage](https://github.com/Chalme
 - **Stale handling.** If Zabbix is unreachable, the last known statuses stay up and the page says the data may be out of date. Admins are e-mailed if it lasts. `/health` lets outside monitoring check the page itself.
 - **Views:** `/` (normal), `/?view=compact` (wall displays), `/?view=micro` (phones).
 
+## Screenshots
+
+Taken from the demo data (`php artisan migrate:fresh --seed --seeder=DemoSeeder`).
+
+<details>
+<summary>Show screenshots</summary>
+
+| | |
+|---|---|
+| ![Status page with announcement, recurring maintenance and a response-time graph](docs/screenshots/01-status-page.png) | Status page with announcement, recurring maintenance and a response-time graph |
+| ![Response-time graph with hover readout](docs/screenshots/02-response-time-graph.png) | Response-time graph with hover readout |
+| ![Published post-incident review](docs/screenshots/03-post-incident-review.png) | Published post-incident review |
+| ![Subscribe page: minimum impact, badge and widget code](docs/screenshots/04-subscribe-and-embed.png) | Subscribe page: minimum impact, badge and widget code |
+| ![Public page in French](docs/screenshots/05-french.png) | Public page in French |
+| ![Dark mode](docs/screenshots/06-dark-mode.png) | Dark mode |
+| ![Badges and the embeddable widget on another site](docs/screenshots/07-badges-and-widget.png) | Badges and the embeddable widget on another site |
+| ![Signed-in staff also see private components](docs/screenshots/08-staff-see-private-components.png) | Signed-in staff also see private components |
+| ![Incidents list: automatic draft flagged Recovered, with Resolve](docs/screenshots/09-admin-incidents-recovered.png) | Incidents list: automatic draft flagged Recovered, with Resolve |
+| ![Incident timeline, with the Scheduled updates tab](docs/screenshots/10-admin-incident-timeline-scheduled.png) | Incident timeline, with the Scheduled updates tab |
+| ![Create an incident from a template](docs/screenshots/11-admin-create-from-template.png) | Create an incident from a template |
+| ![Weekly recurring maintenance](docs/screenshots/12-admin-recurring-maintenance.png) | Weekly recurring maintenance |
+| ![Component options: visibility, SLA target, dependencies, graphs](docs/screenshots/13-admin-component-options.png) | Component options: visibility, SLA target, dependencies, graphs |
+| ![Monthly SLA report](docs/screenshots/14-admin-sla-report.png) | Monthly SLA report |
+| ![Webhooks, including Discord](docs/screenshots/15-admin-webhooks-discord.png) | Webhooks, including Discord |
+| ![Audit log](docs/screenshots/16-admin-audit-log.png) | Audit log |
+| ![Settings: reminders, alerts, branding, languages, private networks](docs/screenshots/17-admin-settings.png) | Settings: reminders, alerts, branding, languages, private networks |
+
+</details>
+
 ## How status is worked out
 
 1. Every 30 s `statuspage:poll` makes **one** `trigger.get` call. It fetches the triggers currently in problem state that carry all of `ZABBIX_PUBLIC_TAGS` (default `output=statuspage`), skipping hosts in Zabbix maintenance. That tag is the safety boundary: untagged triggers never reach the page.
