@@ -1,14 +1,18 @@
 :root {
     --bg: #f6f7f9; --card: #fff; --text: #1d2330; --muted: #6b7280; --border: #e3e6eb;
     --ok: #1f9d55; --degraded: #d69e2e; --partial: #dd6b20; --major: #c53030; --maint: #3182ce; --nodata: #d5d9e0;
+    --chart: #2b6cb0;
     --radius: 8px;
+    color-scheme: light;
 }
+/* Dark: follows the system unless the visitor (or the site default) picked a theme. */
 @media (prefers-color-scheme: dark) {
-    :root { --bg: #11151c; --card: #1a2029; --text: #e6e9ef; --muted: #9aa3b2; --border: #2a313d; --nodata: #333b48; }
+    :root[data-theme="auto"] { --bg: #11151c; --card: #1a2029; --text: #e6e9ef; --muted: #9aa3b2; --border: #2a313d; --nodata: #333b48; --chart: #4a9ad6; color-scheme: dark; }
 }
+:root[data-theme="dark"] { --bg: #11151c; --card: #1a2029; --text: #e6e9ef; --muted: #9aa3b2; --border: #2a313d; --nodata: #333b48; --chart: #4a9ad6; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-a { color: var(--maint); }
+a { color: var(--brand, var(--maint)); }
 .wrap { max-width: 880px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
 .view-compact .wrap { max-width: none; }
 .view-micro .wrap { max-width: 480px; }
@@ -18,10 +22,44 @@ h2 { font-size: 1.15rem; }
 h3 { font-size: 1rem; }
 
 .site-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; gap: 1rem; flex-wrap: wrap; }
-.site-name { font-size: 1.3rem; font-weight: 700; color: var(--text); text-decoration: none; }
+.site-name { font-size: 1.3rem; font-weight: 700; color: var(--text); text-decoration: none; display: inline-flex; align-items: center; gap: .6rem; }
+.site-name .logo { height: 32px; width: auto; }
 .site-header nav a { margin-left: 1rem; }
-.site-footer { margin-top: 2rem; display: flex; justify-content: space-between; color: var(--muted); font-size: .85rem; }
-.site-footer a { margin-left: .75rem; }
+.site-footer { margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; color: var(--muted); font-size: .85rem; }
+.footer-links { display: flex; flex-wrap: wrap; gap: .25rem 1rem; }
+.footer-controls { display: flex; align-items: center; gap: .75rem; }
+.footer-controls select, .theme-toggle, .form select { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: .25rem .5rem; }
+.theme-toggle { cursor: pointer; }
+.skip { position: absolute; left: -999px; }
+.skip:focus { left: 1rem; top: 1rem; background: var(--card); padding: .5rem; z-index: 10; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.small { font-size: .85rem; margin: -.4rem 0 0; }
+.tag { display: inline-block; font-size: .7rem; font-weight: 600; padding: 0 .4rem; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); vertical-align: middle; }
+.form select { display: block; margin-top: .25rem; padding: .45rem .5rem; }
+pre { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: .5rem .75rem; overflow-x: auto; font-size: .85rem; }
+
+.announcement { border-radius: var(--radius); padding: .75rem 1rem; margin-bottom: 1rem; border: 1px solid var(--border); border-left: 4px solid var(--maint); background: var(--card); }
+.announcement.is-warning { border-left-color: var(--degraded); }
+.announcement.is-danger { border-left-color: var(--major); }
+.announcement .markdown p { margin: 0; }
+
+/* Metric chart: one series, 2px line over a 10% wash, hairline baseline. */
+.metric { margin: .75rem 0 0; }
+.metric-head { display: flex; justify-content: space-between; font-size: .85rem; font-weight: 600; }
+.metric-now { font-variant-numeric: tabular-nums; }
+.metric-plot { position: relative; height: 60px; margin-top: .25rem; touch-action: pan-y; }
+.metric-plot svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.metric-line { fill: none; stroke: var(--chart); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; }
+.metric-area { fill: var(--chart); opacity: .1; }
+.metric-base { stroke: var(--border); stroke-width: 1px; }
+.metric-cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--muted); pointer-events: none; }
+.metric-tip { position: absolute; top: -2.2rem; transform: translateX(-50%); background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: .15rem .5rem; font-size: .78rem; white-space: nowrap; pointer-events: none; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+.metric-tip strong { font-variant-numeric: tabular-nums; }
+.metric-legend { display: flex; justify-content: space-between; font-size: .75rem; margin-top: .2rem; }
+.metric-table summary { font-size: .75rem; color: var(--muted); cursor: pointer; }
+.metric-table table { border-collapse: collapse; font-size: .8rem; margin-top: .25rem; }
+.metric-table td, .metric-table th { padding: .1rem .75rem .1rem 0; text-align: left; }
+.postmortem h3 { margin-top: 1rem; }
 
 .banner { border-radius: var(--radius); padding: 1rem 1.25rem; color: #fff; margin-bottom: 1rem; }
 .banner h1 { font-size: 1.35rem; margin: 0; }
@@ -92,7 +130,7 @@ h3 { font-size: 1rem; }
 
 .form { display: flex; flex-direction: column; gap: .75rem; margin-top: 1rem; max-width: 520px; }
 .form input[type=email] { display: block; width: 100%; padding: .5rem .6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; margin-top: .25rem; }
-.form button { align-self: flex-start; padding: .5rem 1.1rem; border: 0; border-radius: 6px; background: var(--maint); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.form button { align-self: flex-start; padding: .5rem 1.1rem; border: 0; border-radius: 6px; background: var(--brand, var(--maint)); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
 .form button.secondary { background: var(--muted); }
 .form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
 .form button.google { display: inline-flex; align-items: center; gap: .5rem; background: #fff; color: #1f1f1f; border: 1px solid #747775; font-weight: 500; }

@@ -43,8 +43,13 @@ class TelegramChatResource extends Resource
                 ->disabledOn('edit')
                 ->helperText('A public channel as @name, or a numeric chat id. Add the bot to the channel or group as an admin first.'),
             TextInput::make('title')->maxLength(255)->helperText('For your reference.'),
-            Select::make('components')->relationship('components', 'name')->multiple()->preload()
-                ->helperText('Empty = all notifications.')->columnSpanFull(),
+            Select::make('components')->relationship('components', 'name', fn ($query) => $query->public())->multiple()->preload()
+                ->helperText('Empty = all notifications. Private components never notify subscribers.')->columnSpanFull(),
+            Select::make('min_impact')->label('Incidents to send')->options([
+                'minor' => 'Minor and more severe',
+                'major' => 'Major and critical only',
+                'critical' => 'Critical only',
+            ])->placeholder('All incidents')->helperText('Maintenance notices are always sent.'),
         ]);
     }
 

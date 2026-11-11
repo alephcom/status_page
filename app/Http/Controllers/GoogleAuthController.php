@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\IncidentImpact;
 use App\Models\Subscriber;
 use App\Models\User;
 use Filament\Facades\Filament;
@@ -9,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\InvalidStateException;
@@ -39,10 +41,12 @@ class GoogleAuthController extends Controller
     {
         $data = $request->validate([
             'components' => ['array'],
-            'components.*' => ['integer', 'exists:components,id'],
+            'components.*' => ['integer', Rule::exists('components', 'id')->where('visibility', 'public')],
+            'min_impact' => ['nullable', Rule::enum(IncidentImpact::class)],
         ]);
 
         $request->session()->put('google.components', array_map('intval', $data['components'] ?? []));
+        $request->session()->put('google.min_impact', $data['min_impact'] ?? null);
 
         return $this->toGoogle($request, 'subscribe');
     }
@@ -61,6 +65,7 @@ class GoogleAuthController extends Controller
 
         $intent = $request->session()->pull('google.intent');
         $components = $request->session()->pull('google.components', []);
+        $minImpact = $request->session()->pull('google.min_impact');
 
         if (! in_array($intent, self::INTENTS, true)) {
             return redirect()->route('status');
@@ -93,7 +98,7 @@ class GoogleAuthController extends Controller
         return match ($intent) {
             'admin' => $this->signInToAdmin($request, $email, $failed),
             'manage' => $this->manage($email),
-            'subscribe' => $this->subscribeAs($email, $components),
+            'subscribe' => $this->subscribeAs($email, $components, $minImpact),
         };
     }
 
@@ -144,18 +149,18 @@ class GoogleAuthController extends Controller
     }
 
     /** @param  list<int>  $components */
-    private function subscribeAs(string $email, array $components): RedirectResponse
+    private function subscribeAs(string $email, array $components, ?string $minImpact = null): RedirectResponse
     {
         $confirmedNow = false;
 
-        $subscriber = DB::transaction(function () use ($email, $components, &$confirmedNow) {
+        $subscriber = DB::transaction(function () use ($email, $components, $minImpact, &$confirmedNow) {
             $subscriber = Subscriber::query()->firstOrCreate(['email' => $email]);
 
             // Like the e-mail form, only a not-yet-confirmed subscription takes
             // its preferences from the form; a confirmed one keeps its own.
             if (! $subscriber->isVerified()) {
                 $subscriber->components()->sync($components);
-                $subscriber->forceFill(['verified_at' => now()])->save();
+                $subscriber->forceFill(['verified_at' => now(), 'min_impact' => IncidentImpact::tryFrom((string) $minImpact)])->save();
                 $confirmedNow = true;
             }
 

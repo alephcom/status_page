@@ -44,12 +44,22 @@ class McpPayloads
             'visible' => $i->visible,
             'component_status' => $i->component_status?->value,
             'auto_created' => $i->auto_created,
+            'monitoring_recovered_at' => $i->recovered_at?->toIso8601String(),
+            'postmortem' => $i->postmortem,
+            'postmortem_published' => $i->postmortem_published_at !== null,
+            'scheduled_updates' => $i->scheduledUpdates()->get()->map(fn ($u) => [
+                'id' => $u->id, 'status' => $u->status->value, 'publish_at' => $u->publish_at->toIso8601String(),
+            ])->values()->all(),
         ];
     }
 
     /** @return array<string, mixed> */
     public static function maintenance(Maintenance $m): array
     {
-        return Payloads::maintenance($m) + ['visible' => $m->visible];
+        return Payloads::maintenance($m) + [
+            'visible' => $m->visible,
+            'recurrence' => $m->recurrence?->value,
+            'recurrence_until' => $m->recurrence_until?->toIso8601String(),
+        ];
     }
 }

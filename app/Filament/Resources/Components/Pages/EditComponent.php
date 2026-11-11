@@ -14,4 +14,10 @@ class EditComponent extends EditRecord
     {
         return [DeleteAction::make()];
     }
+
+    /** Dependencies may have changed. */
+    protected function afterSave(): void
+    {
+        $this->getRecord()->refreshStatus();
+    }
 }

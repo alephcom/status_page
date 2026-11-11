@@ -43,6 +43,10 @@ class Payloads
             $data['updates'] = $i->updates->map(fn (IncidentUpdate $u) => self::update($u))->values();
         }
 
+        if ($i->hasPublishedPostmortem()) {
+            $data['postmortem'] = $i->postmortem;
+        }
+
         return $data;
     }
 

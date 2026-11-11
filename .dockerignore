@@ -8,3 +8,4 @@ storage/framework/sessions/*
 storage/framework/views/*
 database/database.sqlite
 tests
+docs
