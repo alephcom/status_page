@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Ai\IncidentWriter;
 use App\Enums\ComponentStatus;
 use App\Enums\IncidentImpact;
 use App\Enums\IncidentStatus;
+use App\Jobs\DraftAutoIncidentText;
 use App\Models\Component;
 use App\Models\ComponentSource;
 use App\Models\Incident;
@@ -71,6 +73,10 @@ class StatusPoller
             }
         }
 
+        if ($errors === []) {
+            $this->checkRecoveries();
+        }
+
         $now = now();
 
         if ($errors === []) {
@@ -80,6 +86,10 @@ class StatusPoller
         }
 
         Setting::put('last_poll_at', $now->toIso8601String());
+
+        if (! Setting::get('first_poll_at')) {
+            Setting::put('first_poll_at', $now->toIso8601String());
+        }
 
         return ['ok' => $errors === [], 'changed' => $changed, 'errors' => $errors];
     }
@@ -98,16 +108,19 @@ class StatusPoller
 
             foreach ($problems as $problem) {
                 $activeIds[] = $problem->eventid;
-                $component->problems()->updateOrCreate(
-                    ['eventid' => $problem->eventid],
-                    [
-                        'triggerid' => $problem->triggerid,
-                        'name' => mb_substr($problem->name, 0, 255),
-                        'severity' => $problem->severity,
-                        'started_at' => $problem->startedAt,
-                        'resolved_at' => null,
-                    ],
-                );
+                $row = $component->problems()->firstOrNew(['eventid' => $problem->eventid]);
+                $reopened = $row->exists && $row->resolved_at !== null;
+                $row->fill([
+                    'triggerid' => $problem->triggerid,
+                    'name' => mb_substr($problem->name, 0, 255),
+                    'severity' => $problem->severity,
+                    'resolved_at' => null,
+                ]);
+                // Some sources only know "now" as the start; keep the first sighting.
+                if (! $row->exists || $reopened || $problem->startedAt->lessThan($row->started_at)) {
+                    $row->started_at = $problem->startedAt;
+                }
+                $row->save();
             }
 
             $component->problems()
@@ -138,7 +151,9 @@ class StatusPoller
             return;
         }
 
-        $this->incidents->create(
+        $placeholder = 'Monitoring detected a problem. We are investigating.';
+
+        $incident = $this->incidents->create(
             [
                 'title' => "{$component->name} is unavailable",
                 'status' => IncidentStatus::Investigating,
@@ -149,7 +164,36 @@ class StatusPoller
                 'started_at' => now(),
             ],
             [$component->id],
-            'Monitoring detected a problem. We are investigating.',
+            $placeholder,
         );
+
+        if (Setting::get('ai_drafts') && app(IncidentWriter::class)->enabled()) {
+            DraftAutoIncidentText::dispatch($incident, $placeholder);
+        }
+    }
+
+    /**
+     * For incidents that monitoring opened: once every component is healthy
+     * again, resolve hidden drafts or flag the incident for staff. If the
+     * problem comes back, the flag is cleared.
+     */
+    private function checkRecoveries(): void
+    {
+        $resolveDrafts = (bool) Setting::get('auto_resolve_recovered_drafts');
+
+        Incident::query()->unresolved()->where('auto_created', true)
+            ->with(['components' => fn ($q) => $q->withCount('activeProblems')])
+            ->get()
+            ->each(function (Incident $incident) use ($resolveDrafts): void {
+                $healthy = $incident->components->isNotEmpty() && $incident->components->every(
+                    fn (Component $c) => $c->auto_status === ComponentStatus::Operational && $c->active_problems_count === 0,
+                );
+
+                if ($healthy) {
+                    $this->incidents->monitoringRecovered($incident, $resolveDrafts);
+                } elseif ($incident->recovered_at !== null) {
+                    $incident->forceFill(['recovered_at' => null])->saveQuietly();
+                }
+            });
     }
 }

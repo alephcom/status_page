@@ -1,6 +1,7 @@
 <?php
 
 use App\StatusSources\ZabbixHostSource;
+use App\StatusSources\ZabbixServiceSource;
 
 return [
 
@@ -41,7 +42,26 @@ return [
     // Status source drivers, keyed by the name stored on component_sources.
     'sources' => [
         'zabbix_host' => ZabbixHostSource::class,
+        'zabbix_service' => ZabbixServiceSource::class,
     ],
 
     'uptime_days' => (int) env('STATUSPAGE_UPTIME_DAYS', 90),
+
+    // Days to keep data before `statuspage:prune` (daily) deletes it. Daily
+    // uptime figures are kept for good, so SLA reports keep working.
+    'retention' => [
+        'status_changes' => (int) env('STATUSPAGE_KEEP_STATUS_CHANGES_DAYS', 400),
+        'metric_points' => (int) env('STATUSPAGE_KEEP_METRICS_DAYS', 30),
+        'resolved_problems' => (int) env('STATUSPAGE_KEEP_PROBLEMS_DAYS', 90),
+        'audit_log' => (int) env('STATUSPAGE_KEEP_AUDIT_DAYS', 365),
+        'unverified_subscribers' => (int) env('STATUSPAGE_KEEP_UNCONFIRMED_DAYS', 7),
+    ],
+
+    // Response-time and other graphs from Zabbix item history.
+    'metrics' => [
+        // Hours shown on the public page.
+        'hours' => (int) env('STATUSPAGE_METRIC_HOURS', 24),
+        // Samples are averaged into buckets of this many minutes.
+        'bucket_minutes' => (int) env('STATUSPAGE_METRIC_BUCKET_MINUTES', 5),
+    ],
 ];

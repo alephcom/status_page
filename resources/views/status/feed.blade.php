@@ -1,9 +1,9 @@
 {!! '<'.'?xml version="1.0" encoding="UTF-8"?>' !!}
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>{{ $siteName }}</title>
-    <id>{{ route('status') }}</id>
+    <id>{{ $self ?? route('status') }}</id>
     <link href="{{ route('status') }}"/>
-    <link rel="self" href="{{ route('feed') }}"/>
+    <link rel="self" href="{{ $self ?? route('feed') }}"/>
     <updated>{{ ($entries->first()['updated'] ?? now())->toAtomString() }}</updated>
 @foreach ($entries as $entry)
     <entry>

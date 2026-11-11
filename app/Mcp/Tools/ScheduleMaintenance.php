@@ -2,11 +2,13 @@
 
 namespace App\Mcp\Tools;
 
+use App\Enums\Recurrence;
 use App\Mcp\McpPayloads;
 use App\Models\Maintenance;
 use App\Services\MaintenanceManager;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\ResponseFactory;
@@ -28,12 +30,14 @@ class ScheduleMaintenance extends Tool
             'scheduled_start' => ['required', 'date'],
             'scheduled_end' => ['required', 'date', 'after:scheduled_start', 'after:now'],
             'visible' => ['required', 'boolean'],
+            'recurrence' => ['sometimes', 'nullable', Rule::enum(Recurrence::class)],
+            'recurrence_until' => ['sometimes', 'nullable', 'date', 'after:scheduled_start'],
             'component_ids' => ['required', 'array', 'min:1'],
             'component_ids.*' => ['integer', 'distinct', 'exists:components,id'],
         ]);
 
         $maintenance = DB::transaction(function () use ($v) {
-            $m = Maintenance::create(collect($v)->only(['title', 'message', 'scheduled_start', 'scheduled_end', 'visible'])->all());
+            $m = Maintenance::create(collect($v)->only(['title', 'message', 'scheduled_start', 'scheduled_end', 'visible', 'recurrence', 'recurrence_until'])->all());
             $m->components()->sync(array_map('intval', $v['component_ids']));
 
             return $m;
@@ -53,6 +57,8 @@ class ScheduleMaintenance extends Tool
             'scheduled_end' => $schema->string()->format('date-time')->description('ISO 8601, after scheduled_start.')->required(),
             'visible' => $schema->boolean()->description('true shows it publicly and notifies subscribers.')->required(),
             'component_ids' => $schema->array()->items($schema->integer())->description('Affected component ids.')->required(),
+            'recurrence' => $schema->string()->enum(['daily', 'weekly', 'monthly'])->description('Repeat the window: the next one is created when this one ends.'),
+            'recurrence_until' => $schema->string()->format('date-time')->description('Stop repeating after this time.'),
         ];
     }
 }

@@ -132,6 +132,72 @@ class ZabbixClient
     }
 
     /**
+     * IT services (Services / SLA) with the given exact names, with their
+     * current problem events. Status -1 means OK; otherwise it is the
+     * severity (0..5) of the worst problem affecting the service.
+     *
+     * @param  list<string>  $names
+     * @return list<array<string, mixed>>
+     */
+    public function services(array $names): array
+    {
+        if ($names === []) {
+            return [];
+        }
+
+        return $this->call('service.get', [
+            'output' => ['serviceid', 'name', 'status'],
+            'filter' => ['name' => array_values($names)],
+            'selectProblemEvents' => ['eventid', 'severity', 'name'],
+        ]);
+    }
+
+    /**
+     * A numeric item on a host (technical or visible name), or null.
+     *
+     * @return array{itemid: string, value_type: int, units: string, name: string}|null
+     */
+    public function findItem(string $host, string $key): ?array
+    {
+        $hostIds = collect($this->call('host.get', ['output' => ['hostid'], 'filter' => ['host' => [$host]]]))
+            ->concat($this->call('host.get', ['output' => ['hostid'], 'filter' => ['name' => [$host]]]))
+            ->pluck('hostid')->unique()->values()->all();
+
+        if ($hostIds === []) {
+            return null;
+        }
+
+        $item = $this->call('item.get', [
+            'output' => ['itemid', 'value_type', 'units', 'name'],
+            'hostids' => $hostIds,
+            'filter' => ['key_' => $key],
+            'limit' => 1,
+        ])[0] ?? null;
+
+        return $item ? ['itemid' => (string) $item['itemid'], 'value_type' => (int) $item['value_type'], 'units' => (string) ($item['units'] ?? ''), 'name' => (string) ($item['name'] ?? '')] : null;
+    }
+
+    /**
+     * History of one numeric item since $from (unix time), oldest first.
+     *
+     * @return list<array{clock: int, value: float}>
+     */
+    public function history(string $itemId, int $valueType, int $from, int $limit = 10000): array
+    {
+        $rows = $this->call('history.get', [
+            'output' => ['clock', 'value'],
+            'history' => $valueType,
+            'itemids' => [$itemId],
+            'time_from' => $from,
+            'sortfield' => 'clock',
+            'sortorder' => 'ASC',
+            'limit' => $limit,
+        ]);
+
+        return array_map(fn (array $r) => ['clock' => (int) $r['clock'], 'value' => (float) $r['value']], $rows ?? []);
+    }
+
+    /**
      * Hosts matching a search string, for admin pickers.
      *
      * @return list<array{hostid: string, host: string, name: string}>

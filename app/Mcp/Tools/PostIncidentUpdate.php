@@ -6,6 +6,7 @@ use App\Enums\IncidentStatus;
 use App\Mcp\McpPayloads;
 use App\Models\Incident;
 use App\Services\IncidentManager;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
@@ -27,9 +28,20 @@ class PostIncidentUpdate extends Tool
             'incident_id' => ['required', 'integer', 'exists:incidents,id'],
             'status' => ['required', Rule::enum(IncidentStatus::class)],
             'message' => ['required', 'string'],
+            'publish_at' => ['sometimes', 'nullable', 'date', 'after:now'],
         ]);
 
         $incident = Incident::query()->findOrFail($v['incident_id']);
+
+        if (! empty($v['publish_at'])) {
+            $scheduled = $incidents->scheduleUpdate($incident, IncidentStatus::from($v['status']), $v['message'], CarbonImmutable::parse($v['publish_at']), $request->user());
+
+            return Response::structured([
+                'scheduled_update_id' => $scheduled->id,
+                'publish_at' => $scheduled->publish_at->toIso8601String(),
+                'incident' => McpPayloads::incident($incident->load(['components', 'updates']), false),
+            ]);
+        }
         $incidents->postUpdate($incident, IncidentStatus::from($v['status']), $v['message'], $request->user());
 
         return Response::structured(McpPayloads::incident($incident->fresh()->load(['components', 'updates'])));
@@ -41,6 +53,7 @@ class PostIncidentUpdate extends Tool
             'incident_id' => $schema->integer()->required(),
             'status' => $schema->string()->enum(array_column(IncidentStatus::cases(), 'value'))->required(),
             'message' => $schema->string()->description('Public update text (markdown).')->required(),
+            'publish_at' => $schema->string()->format('date-time')->description('Optional ISO 8601 time in the future: the update is posted then instead of now.'),
         ];
     }
 }

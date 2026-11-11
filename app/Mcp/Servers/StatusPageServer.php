@@ -9,6 +9,7 @@ use App\Mcp\Tools\GetIncident;
 use App\Mcp\Tools\GetStatus;
 use App\Mcp\Tools\ListComponents;
 use App\Mcp\Tools\ListIncidents;
+use App\Mcp\Tools\ListIncidentTemplates;
 use App\Mcp\Tools\ListMaintenances;
 use App\Mcp\Tools\PostIncidentUpdate;
 use App\Mcp\Tools\ScheduleMaintenance;
@@ -29,7 +30,9 @@ use Laravel\Mcp\Server\Attributes\Version;
       override; overrides hide what monitoring reports until they are cleared or expire.
     - Visible incidents, incident updates and maintenance windows e-mail subscribers and fire
       webhooks. Create an incident with visible=false to draft it, then publish with update-incident.
-    - Resolve an incident by posting an update with status "resolved".
+    - Resolve an incident by posting an update with status "resolved". Give post-incident-update a
+      publish_at time to schedule an update instead of posting it now.
+    - For recurring problems, list-incident-templates and pass template_id to create-incident.
     - Look up component ids with list-components before referencing them.
     TXT)]
 class StatusPageServer extends Server
@@ -42,6 +45,7 @@ class StatusPageServer extends Server
         ListIncidents::class,
         GetIncident::class,
         ListMaintenances::class,
+        ListIncidentTemplates::class,
         // Write
         CreateIncident::class,
         PostIncidentUpdate::class,

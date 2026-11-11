@@ -15,7 +15,7 @@ class CreateIncident extends CreateRecord
     {
         $componentIds = array_map('intval', $data['component_ids'] ?? []);
         $message = $data['message'];
-        unset($data['component_ids'], $data['message']);
+        unset($data['component_ids'], $data['message'], $data['template']);
 
         return app(IncidentManager::class)->create($data, $componentIds, $message, auth()->user());
     }

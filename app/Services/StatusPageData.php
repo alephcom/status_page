@@ -5,12 +5,15 @@ namespace App\Services;
 use App\Enums\ComponentStatus;
 use App\Models\Component;
 use App\Models\ComponentGroup;
+use App\Models\ComponentMetric;
 use App\Models\ComponentSource;
 use App\Models\Incident;
 use App\Models\Maintenance;
 use App\Models\Setting;
+use App\Support\MetricChart;
+use App\Support\Visibility;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /** Everything the public page needs, gathered in a fixed number of queries. */
 class StatusPageData
@@ -18,19 +21,28 @@ class StatusPageData
     public function __construct(private readonly UptimeCalculator $uptime) {}
 
     /** @return array<string, mixed> */
-    public function build(): array
+    public function build(bool $private = false): array
     {
         $days = (int) config('statuspage.uptime_days');
         $since = CarbonImmutable::today()->subDays($days - 1)->toDateString();
+        $metricsSince = now()->subHours((int) config('statuspage.metrics.hours'));
 
-        $components = Component::query()->enabled()
-            ->with(['group', 'dailyStatus' => fn ($q) => $q->where('date', '>=', $since)])
+        $components = Visibility::components(Component::query()->enabled(), $private)
+            ->with([
+                'group',
+                'dailyStatus' => fn ($q) => $q->where('date', '>=', $since),
+                'metrics' => fn ($q) => $q->where('enabled', true),
+                'metrics.points' => fn ($q) => $q->where('recorded_at', '>=', $metricsSince)->orderBy('recorded_at'),
+            ])
             ->orderBy('order')->orderBy('name')
             ->get();
 
         $components->each(function (Component $c) use ($days) {
             $c->setAttribute('uptime_history', $this->uptime->history($c, $days));
             $c->setAttribute('uptime_percent', $this->uptime->overallPercent($c->uptime_history));
+            $c->setAttribute('charts', $c->metrics
+                ->map(fn (ComponentMetric $m) => new MetricChart($m, $m->points))
+                ->reject->isEmpty()->values());
         });
 
         $groups = ComponentGroup::query()->orderBy('order')->orderBy('name')->get()
@@ -52,12 +64,15 @@ class StatusPageData
             'components' => $components,
             'groups' => $groups,
             'ungrouped' => $components->whereNull('component_group_id')->values(),
-            'activeIncidents' => Incident::query()->visible()->unresolved()
-                ->with(['components', 'updates'])->latest('started_at')->get(),
-            'maintenances' => Maintenance::query()->visible()->upcoming()->with('components')->get(),
-            'recentIncidents' => Incident::query()->visible()->whereNotNull('resolved_at')
+            'activeIncidents' => Visibility::touchingPublic(Incident::query()->visible()->unresolved(), $private)
+                ->with(['components', 'updates'])->latest('started_at')->get()
+                ->each(fn ($i) => Visibility::scrub($i, $private)),
+            'maintenances' => Visibility::touchingPublic(Maintenance::query()->visible()->upcoming(), $private)->with('components')->get()
+                ->each(fn ($m) => Visibility::scrub($m, $private)),
+            'recentIncidents' => Visibility::touchingPublic(Incident::query()->visible()->whereNotNull('resolved_at'), $private)
                 ->where('resolved_at', '>=', now()->subDays($historyDays))
-                ->with(['components', 'updates'])->latest('started_at')->get(),
+                ->with(['components', 'updates'])->latest('started_at')->get()
+                ->each(fn ($i) => Visibility::scrub($i, $private)),
             'historyDays' => $historyDays,
             'uptimeDays' => $days,
             'stale' => $this->staleness(),
@@ -87,9 +102,14 @@ class StatusPageData
         return ['last_ok' => $lastOk];
     }
 
-    /** @return Collection<int, Incident> */
-    public function history(int $perPage = 20)
+    /** @return LengthAwarePaginator<int, Incident> */
+    public function history(bool $private = false, int $perPage = 20)
     {
-        return Incident::query()->visible()->with(['components', 'updates'])->latest('started_at')->paginate($perPage);
+        $page = Visibility::touchingPublic(Incident::query()->visible(), $private)
+            ->with(['components', 'updates'])->latest('started_at')->paginate($perPage);
+
+        $page->getCollection()->each(fn ($i) => Visibility::scrub($i, $private));
+
+        return $page;
     }
 }

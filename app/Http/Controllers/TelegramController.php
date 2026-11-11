@@ -6,6 +6,7 @@ use App\Telegram\BotCommands;
 use App\Telegram\TelegramClient;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Throwable;
 
@@ -34,7 +35,7 @@ class TelegramController extends Controller
 
         $data = $request->validate([
             'components' => ['array'],
-            'components.*' => ['integer', 'exists:components,id'],
+            'components.*' => ['integer', Rule::exists('components', 'id')->where('visibility', 'public')],
         ]);
 
         return redirect()->away(TelegramClient::startLink(BotCommands::rememberSelection($data['components'] ?? [])));

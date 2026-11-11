@@ -30,6 +30,7 @@ class EditIncident extends EditRecord
     protected function mutateFormDataBeforeFill(array $data): array
     {
         $data['component_ids'] = $this->getRecord()->components()->pluck('components.id')->all();
+        $data['postmortem_published'] = $this->getRecord()->postmortem_published_at !== null;
 
         return $data;
     }
@@ -40,7 +41,13 @@ class EditIncident extends EditRecord
         $wasVisible = $record->visible;
         $previous = $record->components()->pluck('components.id')->all();
         $componentIds = array_map('intval', $data['component_ids'] ?? []);
-        unset($data['component_ids'], $data['message'], $data['status']);
+        if (array_key_exists('postmortem_published', $data)) {
+            $data['postmortem_published_at'] = $data['postmortem_published'] && filled($data['postmortem'] ?? $record->postmortem)
+                ? ($record->postmortem_published_at ?? now())
+                : null;
+        }
+
+        unset($data['component_ids'], $data['message'], $data['status'], $data['postmortem_published'], $data['template']);
 
         $record->update($data);
         $record->components()->sync($componentIds);

@@ -31,13 +31,19 @@ class UpdateIncident extends Tool
             'component_ids' => ['sometimes', 'array'],
             'component_ids.*' => ['integer', 'distinct', 'exists:components,id'],
             'component_status' => ['sometimes', 'string', Rule::in(['none', 'degraded', 'partial_outage', 'major_outage', 'maintenance'])],
+            'postmortem' => ['sometimes', 'nullable', 'string'],
+            'postmortem_published' => ['sometimes', 'boolean'],
         ]);
 
         $incident = Incident::query()->findOrFail($v['incident_id']);
         $wasVisible = $incident->visible;
         $previous = $incident->components()->pluck('components.id')->all();
 
-        $incident->fill(array_intersect_key($v, array_flip(['title', 'impact', 'visible'])));
+        $incident->fill(array_intersect_key($v, array_flip(['title', 'impact', 'visible', 'postmortem'])));
+
+        if (array_key_exists('postmortem_published', $v)) {
+            $incident->postmortem_published_at = $v['postmortem_published'] && filled($incident->postmortem) ? ($incident->postmortem_published_at ?? now()) : null;
+        }
         if (array_key_exists('component_status', $v)) {
             $incident->component_status = $v['component_status'] === 'none' ? null : $v['component_status'];
         }
@@ -62,6 +68,8 @@ class UpdateIncident extends Tool
             'component_ids' => $schema->array()->items($schema->integer())->description('Replaces the full list of affected components.'),
             'component_status' => $schema->string()->enum(['none', 'degraded', 'partial_outage', 'major_outage', 'maintenance'])
                 ->description('"none" stops forcing a status on the components.'),
+            'postmortem' => $schema->string()->description('Post-incident review (markdown), for resolved incidents.'),
+            'postmortem_published' => $schema->boolean()->description('true shows the review on the public incident page.'),
         ];
     }
 }

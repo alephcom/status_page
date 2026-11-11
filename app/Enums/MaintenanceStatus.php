@@ -13,11 +13,11 @@ enum MaintenanceStatus: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
+        return __(match ($this) {
             self::Scheduled => 'Scheduled',
             self::InProgress => 'In progress',
             self::Completed => 'Completed',
-        };
+        });
     }
 
     public function getColor(): string

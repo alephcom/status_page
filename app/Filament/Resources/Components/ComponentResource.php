@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\Components;
 
 use App\Enums\ComponentStatus;
+use App\Enums\ComponentVisibility;
 use App\Filament\Concerns\AdminOnly;
 use App\Models\Component;
+use App\Services\MetricPoller;
 use App\StatusSources\StatusSourceManager;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -20,6 +22,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -60,6 +63,23 @@ class ComponentResource extends Resource
                     ->helperText('Shown as a tooltip on the public page.'),
                 TextInput::make('link')->url()->maxLength(255),
                 TextInput::make('order')->numeric()->default(0),
+                Select::make('visibility')->options(ComponentVisibility::class)->default(ComponentVisibility::Public)
+                    ->required()->selectablePlaceholder(false)
+                    ->helperText('Private components are shown to signed-in staff and the networks set under Settings → Status page.'),
+                TextInput::make('sla_target')->label('SLA target')->numeric()->minValue(0)->maxValue(100)->step(0.001)->suffix('%')
+                    ->helperText('Optional, e.g. 99.9. Used by the SLA report.'),
+                Select::make('dependencies')->label('Depends on')
+                    ->relationship('dependencies', 'name', fn ($query, ?Component $record) => $query->when($record, fn ($q) => $q->whereKeyNot($record->id)))
+                    ->multiple()->preload()
+                    ->rules([fn (?Component $record) => function (string $attribute, $value, \Closure $fail) use ($record) {
+                        foreach ((array) $value as $id) {
+                            if ($record && $record->wouldCycle((int) $id)) {
+                                $fail('That would make components depend on each other in a loop.');
+                            }
+                        }
+                    }])
+                    ->helperText('If one of these is down or degraded, this component shows it too.')
+                    ->columnSpanFull(),
                 Toggle::make('enabled')->default(true)->helperText('Disabled components are hidden and not polled.'),
             ]),
 
@@ -84,9 +104,16 @@ class ComponentResource extends Resource
                                 ->live(),
                             TagsInput::make('config.hosts')->label('Zabbix hosts')
                                 ->placeholder('host name, then Enter')
-                                ->helperText('Technical or visible host names.'),
-                            TagsInput::make('config.host_groups')->label('Zabbix host groups'),
+                                ->helperText('Technical or visible host names.')
+                                ->visible(fn (Get $get) => $get('driver') === 'zabbix_host'),
+                            TagsInput::make('config.host_groups')->label('Zabbix host groups')
+                                ->visible(fn (Get $get) => $get('driver') === 'zabbix_host'),
+                            TagsInput::make('config.services')->label('Zabbix services')
+                                ->placeholder('service name, then Enter')
+                                ->helperText('Services from Services → Services in Zabbix. Their status is the severity of the worst problem affecting them.')
+                                ->visible(fn (Get $get) => $get('driver') === 'zabbix_service'),
                             Repeater::make('config.tags')->label('Extra required trigger tags')
+                                ->visible(fn (Get $get) => $get('driver') === 'zabbix_host')
                                 ->helperText('On top of the global public tags ('.config('statuspage.zabbix.public_tags').'). Leave value empty to match any value.')
                                 ->schema([
                                     TextInput::make('tag')->required(),
@@ -102,6 +129,30 @@ class ComponentResource extends Resource
                                     ->default($defaults[$i])
                                     ->selectablePlaceholder(false))->all(),
                             ),
+                        ]),
+                ]),
+
+            Section::make('Graphs')
+                ->description('Show recent values of Zabbix items under the component, e.g. a web scenario\'s response time. Only numeric items.')
+                ->collapsed(fn (?Component $record) => ! $record?->metrics()->exists())
+                ->schema([
+                    Repeater::make('metrics')
+                        ->relationship()
+                        ->hiddenLabel()
+                        ->addActionLabel('Add graph')
+                        ->defaultItems(0)
+                        ->orderColumn('order')
+                        ->collapsible()
+                        ->itemLabel(fn (array $state) => $state['name'] ?? null)
+                        ->columns(3)
+                        ->schema([
+                            TextInput::make('name')->required()->maxLength(100)->placeholder('Response time'),
+                            TextInput::make('host')->label('Zabbix host')->required()->maxLength(255),
+                            TextInput::make('item_key')->label('Item key')->required()->maxLength(255)
+                                ->placeholder('web.test.time[Portal,Home,resp]'),
+                            TextInput::make('unit')->maxLength(20)->helperText('Empty uses the item\'s unit.'),
+                            TextInput::make('decimals')->numeric()->minValue(0)->maxValue(6)->default(0),
+                            Toggle::make('enabled')->default(true)->inline(false),
                         ]),
                 ]),
 
@@ -131,6 +182,8 @@ class ComponentResource extends Resource
                 TextColumn::make('auto_status')->label('Monitoring')->badge()->toggleable(),
                 TextColumn::make('active_problems_count')->counts('activeProblems')->label('Problems'),
                 TextColumn::make('sources_count')->counts('sources')->label('Sources')->toggleable(),
+                TextColumn::make('visibility')->badge()->color(fn ($state) => $state === ComponentVisibility::Private ? 'warning' : 'gray')
+                    ->formatStateUsing(fn ($state) => $state === ComponentVisibility::Private ? 'Private' : 'Public')->toggleable(),
                 ToggleColumn::make('enabled'),
             ])
             ->filters([
@@ -139,8 +192,35 @@ class ComponentResource extends Resource
             ])
             ->recordActions([
                 self::testAction(),
+                self::testMetricsAction(),
                 EditAction::make(),
             ]);
+    }
+
+    /** Fetch the graphs' data now and say what went wrong, if anything. */
+    public static function testMetricsAction(): Action
+    {
+        return Action::make('testMetrics')
+            ->label('Fetch graphs')
+            ->icon(Heroicon::OutlinedChartBar)
+            ->color('gray')
+            ->visible(fn (Component $record) => $record->metrics()->exists())
+            ->action(function (Component $record) {
+                $poller = app(MetricPoller::class);
+                $lines = [];
+
+                foreach ($record->metrics as $metric) {
+                    try {
+                        $poller->pollOne($metric);
+                        $lines[] = "**{$metric->name}**: ok, ".$metric->points()->count().' samples';
+                    } catch (Throwable $e) {
+                        $metric->forceFill(['last_error' => mb_substr($e->getMessage(), 0, 255)])->saveQuietly();
+                        $lines[] = "**{$metric->name}**: {$e->getMessage()}";
+                    }
+                }
+
+                Notification::make()->title('Graphs')->body(implode("\n\n", $lines))->persistent()->send();
+            });
     }
 
     /** Ask the sources right now and show what they report, without saving. */
@@ -191,6 +271,10 @@ class ComponentResource extends Resource
             ($config['hosts'] ?? []) ? 'hosts: '.implode(', ', $config['hosts']) : null,
             ($config['host_groups'] ?? []) ? 'groups: '.implode(', ', $config['host_groups']) : null,
         ]);
+
+        if (($state['driver'] ?? null) === 'zabbix_service') {
+            $parts = ($config['services'] ?? []) ? ['services: '.implode(', ', $config['services'])] : [];
+        }
 
         return ($state['driver'] ?? 'source').($parts ? ' – '.implode('; ', $parts) : '');
     }

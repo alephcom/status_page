@@ -2,14 +2,17 @@
 
 namespace App\Jobs;
 
+use App\Enums\WebhookFormat;
 use App\Models\Webhook;
+use App\Support\DiscordPayload;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Http;
 
 /**
- * POST a JSON event to a webhook. When the webhook has a secret, the body is
- * signed: X-Statuspage-Signature: sha256=<hex hmac of the raw body>.
+ * POST an event to a webhook: our own JSON envelope, or a Discord embed.
+ * When the webhook has a secret, the body is signed:
+ * X-Statuspage-Signature: sha256=<hex hmac of the raw body>.
  */
 class SendWebhook implements ShouldQueue
 {
@@ -31,11 +34,11 @@ class SendWebhook implements ShouldQueue
 
     public function handle(): void
     {
-        $body = json_encode([
-            'event' => $this->event,
-            'sent_at' => now()->toIso8601String(),
-            'data' => $this->data,
-        ], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $payload = $this->webhook->format === WebhookFormat::Discord
+            ? DiscordPayload::make($this->event, $this->data)
+            : ['event' => $this->event, 'sent_at' => now()->toIso8601String(), 'data' => $this->data];
+
+        $body = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
         $headers = ['X-Statuspage-Event' => $this->event];
 

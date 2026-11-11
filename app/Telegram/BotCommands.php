@@ -67,7 +67,7 @@ class BotCommands
         $selection = $payload !== '' ? Cache::pull("telegram-start:{$payload}") : null;
 
         if (is_array($selection)) {
-            $record->components()->sync(Component::query()->whereIn('id', $selection)->pluck('id'));
+            $record->components()->sync(Component::query()->public()->whereIn('id', $selection)->pluck('id'));
         }
 
         $names = $record->components()->orderBy('name')->pluck('name');
@@ -98,7 +98,7 @@ class BotCommands
 
     private function statusText(): string
     {
-        $components = Component::query()->enabled()->orderBy('order')->orderBy('name')->get();
+        $components = Component::query()->enabled()->public()->orderBy('order')->orderBy('name')->get();
         $overall = ComponentStatus::worst($components->pluck('status'));
         $lines = ['<b>'.TelegramMessage::escape(Setting::get('site_name')).'</b>: '.TelegramMessage::escape($overall->getLabel())];
 
