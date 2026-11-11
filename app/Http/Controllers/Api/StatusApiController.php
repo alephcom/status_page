@@ -10,15 +10,17 @@ use App\Models\Maintenance;
 use App\Models\Setting;
 use App\Services\StatusPageData;
 use App\Support\Payloads;
+use App\Support\Visibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/** Read-only public JSON API. */
+/** Read-only public JSON API. Private components only show to allowed networks. */
 class StatusApiController extends Controller
 {
-    public function status(StatusPageData $data): JsonResponse
+    public function status(Request $request, StatusPageData $data): JsonResponse
     {
-        $components = Component::query()->enabled()->with('group')->orderBy('order')->get();
+        $private = Visibility::canSeePrivate($request);
+        $components = $this->visibleComponents($private);
         $overall = ComponentStatus::worst($components->pluck('status'));
 
         return response()->json([
@@ -27,45 +29,56 @@ class StatusApiController extends Controller
             'status_label' => $overall->getLabel(),
             'stale' => $data->staleness() !== null,
             'components' => $components->map(fn ($c) => Payloads::component($c))->values(),
-            'active_incidents' => Incident::query()->visible()->unresolved()->with(['components', 'updates'])->get()
-                ->map(fn ($i) => Payloads::incident($i))->values(),
-            'maintenances' => Maintenance::query()->visible()->upcoming()->with('components')->get()
-                ->map(fn ($m) => Payloads::maintenance($m))->values(),
+            'active_incidents' => Visibility::touchingPublic(Incident::query()->visible()->unresolved(), $private)
+                ->with(['components', 'updates'])->get()
+                ->map(fn ($i) => Payloads::incident(Visibility::scrub($i, $private)))->values(),
+            'maintenances' => Visibility::touchingPublic(Maintenance::query()->visible()->upcoming(), $private)->with('components')->get()
+                ->map(fn ($m) => Payloads::maintenance(Visibility::scrub($m, $private)))->values(),
             'generated_at' => now()->toIso8601String(),
         ]);
     }
 
-    public function components(): JsonResponse
+    public function components(Request $request): JsonResponse
     {
         return response()->json([
-            'data' => Component::query()->enabled()->with('group')->orderBy('order')->get()
-                ->map(fn ($c) => Payloads::component($c))->values(),
+            'data' => $this->visibleComponents(Visibility::canSeePrivate($request))->map(fn ($c) => Payloads::component($c))->values(),
         ]);
     }
 
     public function incidents(Request $request): JsonResponse
     {
-        $page = Incident::query()->visible()->with(['components', 'updates'])->latest('started_at')
+        $private = Visibility::canSeePrivate($request);
+        $page = Visibility::touchingPublic(Incident::query()->visible(), $private)->with(['components', 'updates'])->latest('started_at')
             ->paginate(min(100, max(1, (int) $request->query('per_page', 20))));
 
         return response()->json([
-            'data' => collect($page->items())->map(fn ($i) => Payloads::incident($i))->values(),
+            'data' => collect($page->items())->map(fn ($i) => Payloads::incident(Visibility::scrub($i, $private)))->values(),
             'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()],
         ]);
     }
 
-    public function incident(Incident $incident): JsonResponse
+    public function incident(Request $request, Incident $incident): JsonResponse
     {
-        abort_unless($incident->visible, 404);
+        $private = Visibility::canSeePrivate($request);
+        $incident->load(['components', 'updates']);
 
-        return response()->json(['data' => Payloads::incident($incident->load(['components', 'updates']))]);
+        abort_unless(Visibility::allowsIncident($incident, $private), 404);
+
+        return response()->json(['data' => Payloads::incident(Visibility::scrub($incident, $private))]);
     }
 
-    public function maintenances(): JsonResponse
+    public function maintenances(Request $request): JsonResponse
     {
+        $private = Visibility::canSeePrivate($request);
+
         return response()->json([
-            'data' => Maintenance::query()->visible()->upcoming()->with('components')->get()
-                ->map(fn ($m) => Payloads::maintenance($m))->values(),
+            'data' => Visibility::touchingPublic(Maintenance::query()->visible()->upcoming(), $private)->with('components')->get()
+                ->map(fn ($m) => Payloads::maintenance(Visibility::scrub($m, $private)))->values(),
         ]);
+    }
+
+    private function visibleComponents(bool $private)
+    {
+        return Visibility::components(Component::query()->enabled(), $private)->with('group')->orderBy('order')->get();
     }
 }

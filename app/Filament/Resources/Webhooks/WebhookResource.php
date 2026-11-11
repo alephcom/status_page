@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Webhooks;
 
 use App\Enums\WebhookEvent;
+use App\Enums\WebhookFormat;
 use App\Filament\Concerns\AdminOnly;
 use App\Jobs\SendWebhook;
 use App\Models\Webhook;
@@ -11,10 +12,12 @@ use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
@@ -38,8 +41,14 @@ class WebhookResource extends Resource
         return $schema->components([
             TextInput::make('name')->required()->maxLength(255),
             TextInput::make('url')->url()->required()->maxLength(255),
+            Select::make('format')->options(WebhookFormat::class)->default(WebhookFormat::Json)->required()
+                ->selectablePlaceholder(false)->live()
+                ->helperText(fn (Get $get) => $get('format') === WebhookFormat::Discord || $get('format') === 'discord'
+                    ? 'Paste the Discord channel webhook URL (Channel settings → Integrations → Webhooks).'
+                    : 'Our JSON envelope: {"event", "sent_at", "data"}.'),
             TextInput::make('secret')->password()->revealable()
                 ->helperText('Optional. Signs the body: X-Statuspage-Signature: sha256=HMAC.')
+                ->visible(fn (Get $get) => ! in_array($get('format'), [WebhookFormat::Discord, 'discord'], true))
                 ->dehydrated(fn (?string $state) => filled($state)),
             Toggle::make('enabled')->default(true),
             CheckboxList::make('events')->options(WebhookEvent::class)->required()->columnSpanFull(),
@@ -52,6 +61,7 @@ class WebhookResource extends Resource
             ->columns([
                 TextColumn::make('name')->searchable(),
                 TextColumn::make('url')->limit(50),
+                TextColumn::make('format')->badge()->color('gray'),
                 TextColumn::make('events')->badge()->color('gray'),
                 IconColumn::make('enabled')->boolean(),
                 TextColumn::make('last_status')->label('Last HTTP')->badge()

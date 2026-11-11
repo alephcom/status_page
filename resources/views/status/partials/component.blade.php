@@ -9,10 +9,18 @@
             @if ($component->description && ($view ?? 'normal') === 'normal')
                 <span class="help" title="{{ $component->description }}">?</span>
             @endif
+            @if ($component->isPrivate())
+                <span class="tag" title="{{ __('Only visible to staff and internal networks') }}">{{ __('Internal') }}</span>
+            @endif
         </span>
         <span class="pill is-{{ $component->status->css() }}">{{ $component->status->getLabel() }}</span>
     </div>
     @if (($view ?? 'normal') !== 'micro')
         @include('status.partials.uptime-bar', ['component' => $component])
+    @endif
+    @if (($view ?? 'normal') === 'normal')
+        @foreach ($component->charts ?? [] as $chart)
+            @include('status.partials.metric-chart', ['chart' => $chart])
+        @endforeach
     @endif
 </div>

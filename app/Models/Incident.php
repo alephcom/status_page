@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ComponentStatus;
 use App\Enums\IncidentImpact;
 use App\Enums\IncidentStatus;
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,11 +16,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'title', 'status', 'impact', 'visible', 'auto_created', 'zabbix_eventid',
-    'component_status', 'started_at', 'resolved_at',
+    'component_status', 'started_at', 'resolved_at', 'postmortem', 'postmortem_published_at', 'recovered_at',
 ])]
 class Incident extends Model
 {
-    use HasFactory;
+    use Auditable, HasFactory;
 
     protected $attributes = [
         'status' => 'investigating',
@@ -38,6 +39,8 @@ class Incident extends Model
             'auto_created' => 'boolean',
             'started_at' => 'datetime',
             'resolved_at' => 'datetime',
+            'postmortem_published_at' => 'datetime',
+            'recovered_at' => 'datetime',
         ];
     }
 
@@ -80,6 +83,22 @@ class Incident extends Model
     public function latestUpdate(): HasOne
     {
         return $this->hasOne(IncidentUpdate::class)->latestOfMany();
+    }
+
+    /** @return HasMany<ScheduledIncidentUpdate, $this> */
+    public function scheduledUpdates(): HasMany
+    {
+        return $this->hasMany(ScheduledIncidentUpdate::class)->orderBy('publish_at');
+    }
+
+    public function hasPublishedPostmortem(): bool
+    {
+        return filled($this->postmortem) && $this->postmortem_published_at !== null;
+    }
+
+    public function auditLabel(): string
+    {
+        return $this->title;
     }
 
     public function isResolved(): bool

@@ -48,6 +48,11 @@ class ZabbixFixtures
             'trigger.get' => $result($ok ? [] : self::triggers($newer ? 'hostgroups' : 'groups')),
             'hostgroup.get' => $result(self::search(self::groups(), $params)),
             'host.get' => $result(self::search(self::hosts(), $params)),
+            'service.get' => $result(array_values(array_filter(self::services($ok), fn ($svc) => in_array($svc['name'], (array) ($params['filter']['name'] ?? []), true)))),
+            'item.get' => $result(($params['filter']['key_'] ?? null) === 'web.test.time[Portal]'
+                ? [['itemid' => '900', 'value_type' => '0', 'units' => 's', 'name' => 'Response time']]
+                : (($params['filter']['key_'] ?? null) === 'text.item' ? [['itemid' => '901', 'value_type' => '4', 'units' => '', 'name' => 'Text']] : [])),
+            'history.get' => $result(self::history((int) ($params['time_from'] ?? 0))),
             default => $error('Method not found.', $method),
         };
     }
@@ -137,5 +142,38 @@ class ZabbixFixtures
             // On the API host but without the extra "service=api" tag the API source requires.
             $t('105', 'API CPU high', 4, [$h('5')], [], $tag, 60, '5006'),
         ];
+    }
+
+    /**
+     * IT services: "Web shop" has a High problem (unless all is OK), "Payments" is fine.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function services(bool $ok = false): array
+    {
+        return [
+            ['serviceid' => '1', 'name' => 'Web shop', 'status' => $ok ? '-1' : '4',
+                'problem_events' => $ok ? [] : [['eventid' => '7001', 'severity' => '4', 'name' => 'Checkout failing']]],
+            ['serviceid' => '2', 'name' => 'Payments', 'status' => '-1', 'problem_events' => []],
+        ];
+    }
+
+    /**
+     * Response times every 10 minutes for the last hour.
+     *
+     * @return list<array{clock: string, value: string}>
+     */
+    public static function history(int $from): array
+    {
+        $now = time();
+        $out = [];
+
+        for ($t = $now - 3600; $t <= $now; $t += 600) {
+            if ($t >= $from) {
+                $out[] = ['clock' => (string) $t, 'value' => (string) (0.2 + ($t % 7) / 100)];
+            }
+        }
+
+        return $out;
     }
 }

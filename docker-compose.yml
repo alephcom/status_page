@@ -10,6 +10,9 @@ services:
       DB_DATABASE: statuspage
       DB_USERNAME: statuspage
       DB_PASSWORD: ${DB_PASSWORD:-statuspage}
+    volumes:
+      # Uploaded branding (logo).
+      - uploads:/var/www/html/storage/app/public
     depends_on:
       db:
         condition: service_healthy
@@ -24,7 +27,8 @@ services:
     depends_on: [app]
     restart: unless-stopped
 
-  # Polls Zabbix every 30 s and rolls up uptime.
+  # Polls Zabbix every 30 s, rolls up uptime, sends maintenance notices,
+  # posts scheduled updates, fetches graphs and prunes old data.
   scheduler:
     build: .
     command: php artisan schedule:work
@@ -50,3 +54,4 @@ services:
 
 volumes:
   db:
+  uploads:

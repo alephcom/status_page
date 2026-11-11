@@ -1,5 +1,5 @@
 <fieldset class="checkboxes">
-    <legend>Components <small class="muted">(leave all unticked to hear about everything)</small></legend>
+    <legend>{{ __('Components') }} <small class="muted">({{ __('leave all unticked to hear about everything') }})</small></legend>
     @foreach ($components->groupBy(fn ($c) => $c->group?->name ?? '') as $groupName => $items)
         @if ($groupName !== '')<p class="group-label">{{ $groupName }}</p>@endif
         @foreach ($items as $component)

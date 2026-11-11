@@ -6,6 +6,7 @@ use App\Enums\ComponentStatus;
 use App\Enums\IncidentImpact;
 use App\Enums\IncidentStatus;
 use App\Mcp\McpPayloads;
+use App\Models\IncidentTemplate;
 use App\Services\IncidentManager;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rule;
@@ -25,8 +26,9 @@ class CreateIncident extends Tool
     public function handle(Request $request, IncidentManager $incidents): ResponseFactory
     {
         $v = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'message' => ['required', 'string'],
+            'template_id' => ['sometimes', 'integer', 'exists:incident_templates,id'],
+            'title' => [Rule::requiredIf(! $request->get('template_id')), 'string', 'max:255'],
+            'message' => [Rule::requiredIf(! $request->get('template_id')), 'string'],
             'visible' => ['required', 'boolean'],
             'status' => ['sometimes', Rule::enum(IncidentStatus::class)->except(IncidentStatus::Resolved)],
             'impact' => ['sometimes', Rule::enum(IncidentImpact::class)],
@@ -35,13 +37,15 @@ class CreateIncident extends Tool
             'component_status' => ['sometimes', 'nullable', Rule::enum(ComponentStatus::class)->except(ComponentStatus::Operational)],
         ]);
 
+        $template = isset($v['template_id']) ? IncidentTemplate::query()->find($v['template_id']) : null;
+
         $incident = $incidents->create([
-            'title' => $v['title'],
+            'title' => $v['title'] ?? $template->title,
             'visible' => $v['visible'],
             'status' => $v['status'] ?? IncidentStatus::Investigating->value,
-            'impact' => $v['impact'] ?? IncidentImpact::Minor->value,
-            'component_status' => $v['component_status'] ?? null,
-        ], array_map('intval', $v['component_ids'] ?? []), $v['message'], $request->user());
+            'impact' => $v['impact'] ?? $template?->impact->value ?? IncidentImpact::Minor->value,
+            'component_status' => array_key_exists('component_status', $v) ? $v['component_status'] : $template?->component_status?->value,
+        ], array_map('intval', $v['component_ids'] ?? $template?->existingComponentIds() ?? []), $v['message'] ?? $template->message, $request->user());
 
         return Response::structured(McpPayloads::incident($incident->load(['components', 'updates'])));
     }
@@ -49,8 +53,9 @@ class CreateIncident extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'title' => $schema->string()->description('Short public headline, e.g. "Login failures on the portal".')->required(),
-            'message' => $schema->string()->description('First public update (markdown).')->required(),
+            'template_id' => $schema->integer()->description('Optional template from list-incident-templates; its title, message, impact and components are used unless given here.'),
+            'title' => $schema->string()->description('Short public headline, e.g. "Login failures on the portal". Required without template_id.'),
+            'message' => $schema->string()->description('First public update (markdown). Required without template_id.'),
             'visible' => $schema->boolean()->description('true publishes now and notifies subscribers; false saves a hidden draft.')->required(),
             'status' => $schema->string()->enum(['investigating', 'identified', 'monitoring'])->default('investigating'),
             'impact' => $schema->string()->enum(array_column(IncidentImpact::cases(), 'value'))->default('minor'),

@@ -37,8 +37,13 @@ class SubscriberResource extends Resource
             TextInput::make('email')->email()->required()->unique(ignoreRecord: true),
             DateTimePicker::make('verified_at')->label('Verified')
                 ->helperText('Set to add someone without the confirmation e-mail.'),
-            Select::make('components')->relationship('components', 'name')->multiple()->preload()
-                ->helperText('Empty = all notifications.')->columnSpanFull(),
+            Select::make('components')->relationship('components', 'name', fn ($query) => $query->public())->multiple()->preload()
+                ->helperText('Empty = all notifications. Private components never notify subscribers.')->columnSpanFull(),
+            Select::make('min_impact')->label('Incidents to send')->options([
+                'minor' => 'Minor and more severe',
+                'major' => 'Major and critical only',
+                'critical' => 'Critical only',
+            ])->placeholder('All incidents')->helperText('Maintenance notices are always sent.'),
         ]);
     }
 

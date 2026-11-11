@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Maintenances;
 
 use App\Enums\MaintenanceStatus;
+use App\Enums\Recurrence;
 use App\Models\Maintenance;
 use App\Services\MaintenanceManager;
 use BackedEnum;
@@ -47,6 +48,12 @@ class MaintenanceResource extends Resource
                 ->helperText('Shown as "Under maintenance" during the window.')
                 ->columnSpanFull(),
             MarkdownEditor::make('message')->columnSpanFull(),
+            Select::make('recurrence')->label('Repeat')->options(Recurrence::class)->placeholder('Does not repeat')
+                ->live()
+                ->helperText('When a window ends, the next one is created with the same details. Subscribers get reminders and start/end notices for each, but only one "scheduled" e-mail.'),
+            DateTimePicker::make('recurrence_until')->label('Repeat until')->seconds(false)
+                ->visible(fn (Get $get) => filled($get('recurrence')))
+                ->helperText('Optional.'),
             Toggle::make('visible')->default(true)
                 ->helperText(fn (Get $get, ?Maintenance $record) => $record?->notified
                     ? 'Subscribers have already been notified.'
@@ -65,6 +72,7 @@ class MaintenanceResource extends Resource
                 TextColumn::make('scheduled_start')->dateTime()->sortable(),
                 TextColumn::make('scheduled_end')->dateTime()->sortable(),
                 TextColumn::make('components.name')->badge()->color('gray')->limitList(3),
+                TextColumn::make('recurrence')->label('Repeats')->badge()->color('gray')->placeholder('—'),
                 IconColumn::make('visible')->boolean(),
             ])
             ->recordActions([

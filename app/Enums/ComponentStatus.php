@@ -30,13 +30,13 @@ enum ComponentStatus: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
+        return __(match ($this) {
             self::Operational => 'Operational',
             self::Degraded => 'Degraded performance',
             self::PartialOutage => 'Partial outage',
             self::MajorOutage => 'Major outage',
             self::Maintenance => 'Under maintenance',
-        };
+        });
     }
 
     public function getColor(): string

@@ -2,11 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ComponentVisibility;
 use App\Enums\IncidentImpact;
 use App\Enums\IncidentStatus;
 use App\Models\Component;
 use App\Models\ComponentGroup;
+use App\Models\IncidentTemplate;
 use App\Models\Maintenance;
+use App\Models\MetricPoint;
 use App\Models\Setting;
 use App\Services\IncidentManager;
 use App\Services\UptimeCalculator;
@@ -68,7 +71,52 @@ class DemoSeeder extends Seeder
         ]);
         $maintenance->components()->attach($dns);
 
+        $website->update(['sla_target' => 99.9]);
+
+        IncidentTemplate::create([
+            'name' => 'Load balancer failover',
+            'title' => 'Website unavailable',
+            'message' => 'The website is not responding. We are failing over to the standby load balancer.',
+            'impact' => 'major',
+            'component_status' => 'major_outage',
+            'component_ids' => [$website->id],
+        ]);
+
+        Component::create([
+            'component_group_id' => $backend->id,
+            'name' => 'Build farm',
+            'description' => 'Only staff and internal networks see this one.',
+            'order' => 3,
+            'visibility' => ComponentVisibility::Private,
+        ]);
+
         $this->backfillHistory();
+        $this->sampleMetric($website);
+    }
+
+    /** A response-time graph with a day of made-up samples (the mock Zabbix serves the last hour). */
+    private function sampleMetric(Component $website): void
+    {
+        $metric = $website->metrics()->create([
+            'name' => 'Response time',
+            'host' => 'Website',
+            'item_key' => 'web.test.time[Portal]',
+            'unit' => 's',
+            'decimals' => 2,
+        ]);
+
+        $start = now()->subDay()->startOfHour();
+        $rows = [];
+
+        for ($t = $start->copy(), $i = 0; $t->lessThan(now()); $t->addMinutes(5), $i++) {
+            $rows[] = [
+                'component_metric_id' => $metric->id,
+                'recorded_at' => $t->toDateTimeString(),
+                'value' => round((180 + 40 * sin($i / 30) + mt_rand(0, 25) + ($i > 200 && $i < 212 ? 400 : 0)) / 1000, 3),
+            ];
+        }
+
+        MetricPoint::query()->insert($rows);
     }
 
     /**

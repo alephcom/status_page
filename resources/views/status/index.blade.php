@@ -9,24 +9,24 @@
 @section('content')
 <div id="status-root" data-refresh="60">
     @php($overallText = match ($overall) {
-        \App\Enums\ComponentStatus::Operational => 'All systems operational',
-        \App\Enums\ComponentStatus::Degraded => 'Some systems are degraded',
-        \App\Enums\ComponentStatus::Maintenance => 'Maintenance in progress',
-        \App\Enums\ComponentStatus::PartialOutage => 'Partial outage',
-        \App\Enums\ComponentStatus::MajorOutage => 'Major outage',
+        \App\Enums\ComponentStatus::Operational => __('All systems operational'),
+        \App\Enums\ComponentStatus::Degraded => __('Some systems are degraded'),
+        \App\Enums\ComponentStatus::Maintenance => __('Maintenance in progress'),
+        \App\Enums\ComponentStatus::PartialOutage => __('Partial outage'),
+        \App\Enums\ComponentStatus::MajorOutage => __('Major outage'),
     })
     <section class="banner is-{{ $overall->css() }}">
         <h1>{{ $overallText }}</h1>
-        <p>Updated @include('status.partials.time', ['at' => $generatedAt, 'format' => 'time'])</p>
+        <p>{{ __('Updated') }} @include('status.partials.time', ['at' => $generatedAt, 'format' => 'time'])</p>
     </section>
 
     @if ($stale)
         <div class="notice is-stale" role="status">
-            <strong>Monitoring data may be out of date.</strong>
+            <strong>{{ __('Monitoring data may be out of date.') }}</strong>
             @if ($stale['last_ok'])
-                Last successful update @include('status.partials.time', ['at' => $stale['last_ok']]).
+                {{ __('Last successful update') }} @include('status.partials.time', ['at' => $stale['last_ok']]).
             @else
-                No monitoring data has been received yet.
+                {{ __('No monitoring data has been received yet.') }}
             @endif
         </div>
     @endif
@@ -37,7 +37,7 @@
 
     @if ($activeIncidents->isNotEmpty())
         <section class="block">
-            <h2>Current incidents</h2>
+            <h2>{{ __('Current incidents') }}</h2>
             @foreach ($activeIncidents as $incident)
                 @include('status.partials.incident', ['incident' => $incident, 'limit' => $view === 'normal' ? 100 : 1])
             @endforeach
@@ -46,7 +46,7 @@
 
     @if ($maintenances->isNotEmpty())
         <section class="block">
-            <h2>Planned maintenance</h2>
+            <h2>{{ __('Planned maintenance') }}</h2>
             @foreach ($maintenances as $maintenance)
                 @include('status.partials.maintenance', ['maintenance' => $maintenance])
             @endforeach
@@ -94,18 +94,18 @@
 
     @if ($view === 'normal')
         <section class="block">
-            <h2>Past incidents</h2>
+            <h2>{{ __('Past incidents') }}</h2>
             @forelse ($recentIncidents as $incident)
                 @include('status.partials.incident', ['incident' => $incident, 'limit' => 1])
             @empty
-                <p class="muted">No incidents in the last {{ $historyDays }} days.</p>
+                <p class="muted">{{ __('No incidents in the last :days days.', ['days' => $historyDays]) }}</p>
             @endforelse
-            <p><a href="{{ route('history') }}">Full incident history →</a></p>
+            <p><a href="{{ route('history') }}">{{ __('Full incident history') }} →</a></p>
         </section>
 
         @if (! empty($externalLinks))
             <section class="block">
-                <h2>Other status pages</h2>
+                <h2>{{ __('Other status pages') }}</h2>
                 <ul class="links">
                     @foreach ($externalLinks as $link)
                         <li>
@@ -121,11 +121,9 @@
 @endsection
 
 @section('footer')
-    <span class="views">
-        @foreach (['normal' => 'Normal', 'compact' => 'Compact', 'micro' => 'Micro'] as $key => $label)
-            @if ($key !== $view)
-                <a href="{{ $key === 'normal' ? route('status') : route('status', ['view' => $key]) }}">{{ $label }}</a>
-            @endif
-        @endforeach
-    </span>
+    @foreach (['normal' => __('Normal view'), 'compact' => __('Compact view'), 'micro' => __('Micro view')] as $key => $label)
+        @if ($key !== $view)
+            <a href="{{ $key === 'normal' ? route('status') : route('status', ['view' => $key]) }}">{{ $label }}</a>
+        @endif
+    @endforeach
 @endsection

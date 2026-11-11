@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\IncidentImpact;
 use App\Models\Concerns\FiltersByComponents;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -11,14 +12,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 
-#[Fillable(['email', 'verified_at'])]
+#[Fillable(['email', 'verified_at', 'min_impact'])]
 class Subscriber extends Model
 {
     use FiltersByComponents, HasFactory, Notifiable;
 
     protected function casts(): array
     {
-        return ['verified_at' => 'datetime'];
+        return ['verified_at' => 'datetime', 'min_impact' => IncidentImpact::class];
     }
 
     protected static function booted(): void
