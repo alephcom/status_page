@@ -18,13 +18,15 @@ use App\Models\Setting;
 use App\Models\User;
 use Filament\Actions\CreateAction;
 use Filament\Actions\Testing\TestAction;
+use Filament\Forms\Components\Select;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Concerns\FakesZabbix;
 use Tests\TestCase;
 
 class AdminFormsTest extends TestCase
 {
-    use RefreshDatabase;
+    use FakesZabbix, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -54,6 +56,22 @@ class AdminFormsTest extends TestCase
         $this->assertSame(['portal01', 'portal02'], $config['hosts']);
         $this->assertSame('ignore', $config['severity_map'][2]);
         $this->assertSame([['tag' => 'service', 'value' => 'portal']], $config['tags']);
+    }
+
+    public function test_host_picker_searches_zabbix(): void
+    {
+        $this->fakeZabbix();
+
+        $component = Livewire::test(CreateComponent::class)
+            ->fillForm(['name' => 'Portal', 'sources' => [['driver' => 'zabbix_host']]]);
+
+        $path = collect($component->instance()->form->getFlatFields(withHidden: true))
+            ->keys()->first(fn (string $key) => str_ends_with($key, 'config.hosts'));
+        $this->assertNotNull($path);
+
+        $results = $component->instance()->form->getComponent(fn ($c) => $c instanceof Select && str_ends_with((string) $c->getStatePath(), 'config.hosts'))
+            ->getSearchResults('mail');
+        $this->assertSame('Mail (mail01.example.net)', $results['mail01.example.net']);
     }
 
     public function test_editing_a_source_without_stored_severity_map_shows_defaults(): void

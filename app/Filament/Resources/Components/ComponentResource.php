@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Components;
 
 use App\Enums\ComponentStatus;
 use App\Filament\Concerns\AdminOnly;
+use App\Filament\Support\ZabbixLookup;
 use App\Models\Component;
 use App\StatusSources\StatusSourceManager;
 use BackedEnum;
@@ -12,7 +13,6 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -82,10 +82,21 @@ class ComponentResource extends Resource
                                 ->default('zabbix_host')
                                 ->required()
                                 ->live(),
-                            TagsInput::make('config.hosts')->label('Zabbix hosts')
-                                ->placeholder('host name, then Enter')
-                                ->helperText('Technical or visible host names.'),
-                            TagsInput::make('config.host_groups')->label('Zabbix host groups'),
+                            Select::make('config.hosts')->label('Zabbix hosts')
+                                ->multiple()
+                                ->searchable()
+                                ->searchDebounce(400)
+                                ->searchPrompt('Type at least 2 characters to search Zabbix')
+                                ->getSearchResultsUsing(fn (?string $search) => ZabbixLookup::hosts($search))
+                                ->getOptionLabelsUsing(fn (array $values) => ZabbixLookup::labels($values))
+                                ->helperText('Searches host and visible names in Zabbix.'),
+                            Select::make('config.host_groups')->label('Zabbix host groups')
+                                ->multiple()
+                                ->searchable()
+                                ->searchDebounce(400)
+                                ->searchPrompt('Type at least 2 characters to search Zabbix')
+                                ->getSearchResultsUsing(fn (?string $search) => ZabbixLookup::hostGroups($search))
+                                ->getOptionLabelsUsing(fn (array $values) => ZabbixLookup::labels($values)),
                             Repeater::make('config.tags')->label('Extra required trigger tags')
                                 ->helperText('On top of the global public tags ('.config('statuspage.zabbix.public_tags').'). Leave value empty to match any value.')
                                 ->schema([
