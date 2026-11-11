@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\FiltersByComponents;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,7 @@ use Illuminate\Support\Str;
 #[Fillable(['email', 'verified_at'])]
 class Subscriber extends Model
 {
-    use HasFactory, Notifiable;
+    use FiltersByComponents, HasFactory, Notifiable;
 
     protected function casts(): array
     {
@@ -36,25 +37,6 @@ class Subscriber extends Model
     public function scopeVerified(Builder $query): void
     {
         $query->whereNotNull('verified_at');
-    }
-
-    /**
-     * Subscribers with no component selection get everything; otherwise only
-     * notifications touching one of their components (or none at all, i.e.
-     * site-wide notices).
-     *
-     * @param  Builder<Subscriber>  $query
-     * @param  array<int>  $componentIds
-     */
-    public function scopeInterestedIn(Builder $query, array $componentIds): void
-    {
-        if ($componentIds === []) {
-            return;
-        }
-
-        $query->where(fn (Builder $q) => $q
-            ->whereDoesntHave('components')
-            ->orWhereHas('components', fn (Builder $c) => $c->whereIn('components.id', $componentIds)));
     }
 
     /** @return BelongsToMany<Component, $this> */

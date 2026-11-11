@@ -96,7 +96,8 @@ h3 { font-size: 1rem; }
 .form button.secondary { background: var(--muted); }
 .form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
 .form button.google { display: inline-flex; align-items: center; gap: .5rem; background: #fff; color: #1f1f1f; border: 1px solid #747775; font-weight: 500; }
-.form button.google svg { width: 18px; height: 18px; }
+.form button.google svg, .form button.telegram svg { width: 18px; height: 18px; }
+.form button.telegram { display: inline-flex; align-items: center; gap: .5rem; background: #229ED9; color: #fff; font-weight: 500; }
 .notice.is-error { border-left-color: var(--major); }
 .checkboxes { border: 1px solid var(--border); border-radius: 6px; padding: .5rem .9rem; }
 .checkboxes label { display: block; }

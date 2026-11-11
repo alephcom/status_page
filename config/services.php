@@ -43,4 +43,11 @@ return [
         'redirect' => '/auth/google/callback',
     ],
 
+    // Telegram bot for notifications. Run `php artisan statuspage:telegram-setup`
+    // after setting these to register the webhook.
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'bot_username' => env('TELEGRAM_BOT_USERNAME'),
+    ],
+
 ];

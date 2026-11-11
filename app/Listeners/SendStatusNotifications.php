@@ -8,12 +8,16 @@ use App\Events\ComponentStatusChanged;
 use App\Events\IncidentPublished;
 use App\Events\IncidentUpdatePosted;
 use App\Events\MaintenanceScheduled;
+use App\Jobs\SendTelegramMessage;
 use App\Jobs\SendWebhook;
 use App\Models\Setting;
 use App\Models\Subscriber;
+use App\Models\TelegramChat;
 use App\Models\Webhook;
 use App\Notifications\StatusNotification;
 use App\Support\Payloads;
+use App\Telegram\TelegramClient;
+use App\Telegram\TelegramMessage;
 use Illuminate\Support\Facades\Notification;
 
 class SendStatusNotifications
@@ -97,11 +101,24 @@ class SendStatusNotifications
         ));
     }
 
-    /** @param list<int> $componentIds */
+    /**
+     * Send to e-mail subscribers and Telegram chats.
+     *
+     * @param  list<int>  $componentIds
+     */
     private function mail(array $componentIds, StatusNotification $notification): void
     {
         Subscriber::query()->verified()->interestedIn($componentIds)
             ->chunkById(200, fn ($subscribers) => Notification::send($subscribers, $notification));
+
+        if (TelegramClient::enabled()) {
+            $html = TelegramMessage::fromNotification($notification);
+
+            TelegramChat::query()->interestedIn($componentIds)
+                ->chunkById(200, fn ($chats) => $chats->each(function (TelegramChat $chat) use ($html): void {
+                    SendTelegramMessage::dispatch($chat, $html);
+                }));
+        }
     }
 
     /** @param array<string, mixed> $data */

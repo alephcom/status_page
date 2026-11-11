@@ -13,6 +13,7 @@ Inspired by [ChalmersLibrary/zabbix-public-statuspage](https://github.com/Chalme
 - **Manual overrides** per component, with an optional expiry.
 - **Subscribers.** E-mail with double opt-in and per-component filtering, or one-click sign-up with Google. Also an Atom feed and signed webhooks.
 - **Google sign-in** (optional) for subscribers and for admin panel staff.
+- **Telegram** (optional): people subscribe through a bot, and admins can post to channels and groups.
 - **Admin panel** at `/admin`. Editors handle incidents and maintenance. Admins also manage components, users, webhooks, subscribers and settings.
 - **Read-only JSON API** at `/api/v1/{status,components,incidents,maintenances}`.
 - **MCP server** at `/mcp`, so AI assistants and agents can read status and manage incidents and maintenance. See [MCP server](#mcp-server).
@@ -132,6 +133,25 @@ Setup in [Google Cloud Console](https://console.cloud.google.com/apis/credential
 1. Configure the OAuth consent screen (user type "External" so anyone with a Google account can subscribe). Only the `openid` and `email` scopes are requested.
 2. Create an OAuth client ID of type "Web application" with the authorised redirect URI `<APP_URL>/auth/google/callback`.
 3. Put the client ID and secret in `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Make sure `APP_URL` matches the public URL.
+
+## Telegram
+
+Optional. Telegram chats get the same notifications as e-mail subscribers (incidents, incident updates, maintenance, and component changes if that setting is on), filtered by component.
+
+- **Subscribers:** "Get updates on Telegram" on `/subscribe` opens the bot with the ticked components, and pressing Start subscribes. People can also message the bot directly or add it to a group. Commands: `/start`, `/stop`, `/status`, `/help`.
+- **Channels and groups:** admins add them under **Notifications → Telegram Chats** (`@channelname` or a numeric chat id). The bot must be an admin of a channel to post there. A test message is sent when one is added, and errors are shown in the list.
+- Chats that block or remove the bot are dropped automatically. Admin-added chats are kept, with the error shown.
+- Sending is queued and limited to 25 messages per second, below Telegram's limit.
+
+Setup:
+1. Create a bot with [@BotFather](https://t.me/BotFather) and put its token and username in `.env` as `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME`.
+2. With `APP_URL` set to the public HTTPS URL, run:
+
+```bash
+php artisan statuspage:telegram-setup
+```
+
+This registers the webhook (`/telegram/webhook`, authenticated with a secret derived from `APP_KEY`) and the bot's command menu. Run it again if the URL, token or `APP_KEY` changes.
 
 ## MCP server
 
