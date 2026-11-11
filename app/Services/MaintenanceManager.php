@@ -16,7 +16,9 @@ class MaintenanceManager
     public function saved(Maintenance $maintenance, array $previousComponentIds = []): void
     {
         $ids = array_unique([...$previousComponentIds, ...$maintenance->components()->pluck('components.id')->all()]);
-        Component::query()->whereIn('id', $ids)->get()->each->refreshStatus();
+        Component::query()->whereIn('id', $ids)->get()->each(function (Component $c): void {
+            $c->refreshStatus();
+        });
 
         if ($maintenance->visible && ! $maintenance->notified && $maintenance->scheduled_end->isFuture()) {
             $maintenance->forceFill(['notified' => true])->saveQuietly();
@@ -28,6 +30,8 @@ class MaintenanceManager
     {
         $components = $maintenance->components()->get();
         $maintenance->components()->detach();
-        $components->each->refreshStatus();
+        $components->each(function (Component $c): void {
+            $c->refreshStatus();
+        });
     }
 }

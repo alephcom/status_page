@@ -55,7 +55,9 @@ class IncidentManager
 
         // Components removed from the incident may need to recover.
         if ($previousComponentIds !== []) {
-            Component::query()->whereIn('id', $previousComponentIds)->get()->each->refreshStatus();
+            Component::query()->whereIn('id', $previousComponentIds)->get()->each(function (Component $c): void {
+                $c->refreshStatus();
+            });
         }
 
         if ($incident->visible && ! $wasVisible) {

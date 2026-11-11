@@ -14,6 +14,7 @@ Inspired by [ChalmersLibrary/zabbix-public-statuspage](https://github.com/Chalme
 - **Subscribers.** E-mail with double opt-in and per-component filtering. Also an Atom feed and signed webhooks.
 - **Admin panel** at `/admin`. Editors handle incidents and maintenance. Admins also manage components, users, webhooks, subscribers and settings.
 - **Read-only JSON API** at `/api/v1/{status,components,incidents,maintenances}`.
+- **MCP server** at `/mcp`, so AI assistants and agents can read status and manage incidents and maintenance. See [MCP server](#mcp-server).
 - **Stale handling.** If Zabbix is unreachable, the last known statuses stay up and the page says the data may be out of date.
 - **Views:** `/` (normal), `/?view=compact` (wall displays), `/?view=micro` (phones).
 
@@ -117,6 +118,35 @@ Run the tests:
 ```bash
 php artisan test
 ```
+
+## MCP server
+
+`/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) endpoint (streamable HTTP, via `laravel/mcp`). It needs a bearer token belonging to an admin or editor:
+
+```bash
+php artisan statuspage:mcp-token you@example.com --name=claude
+```
+
+Revoke it with `--revoke --name=claude`. Then add the server to your client, e.g. Claude Code:
+
+```bash
+claude mcp add --transport http statuspage https://status.example.com/mcp --header "Authorization: Bearer <token>"
+```
+
+Read tools (they also show hidden drafts):
+- `get-status`: overall status, components, open incidents, upcoming maintenance
+- `list-components`, `get-component` (active Zabbix problems, uptime)
+- `list-incidents`, `get-incident` (full timeline)
+- `list-maintenances`
+
+Write tools, which go through the same services as the admin panel:
+- `create-incident`: `visible` is required. `false` saves a hidden draft, `true` publishes it and notifies subscribers.
+- `post-incident-update`: adds a timeline entry and sets the status. Use `resolved` to resolve.
+- `update-incident`: title, impact, components, forced component status; `visible: true` publishes a draft.
+- `schedule-maintenance`, `update-maintenance` (reschedule, or end early), `cancel-maintenance` (deletes it)
+- `set-component-override`: admins only, and hidden from editors
+
+Updates are attributed to the token's user. The endpoint is limited to 60 requests per minute per token.
 
 ## Webhooks
 
