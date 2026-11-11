@@ -46,10 +46,39 @@ class ZabbixFixtures
 
         return match ($method) {
             'trigger.get' => $result($ok ? [] : self::triggers($newer ? 'hostgroups' : 'groups')),
-            'hostgroup.get' => $result(array_values(array_filter(self::groups(), fn ($g) => in_array($g['name'], (array) ($params['filter']['name'] ?? []), true)))),
-            'host.get' => $result(self::hosts()),
+            'hostgroup.get' => $result(self::search(self::groups(), $params)),
+            'host.get' => $result(self::search(self::hosts(), $params)),
             default => $error('Method not found.', $method),
         };
+    }
+
+    /**
+     * Apply the subset of filter/search semantics the app uses: exact
+     * "filter" match, and case-insensitive substring "search" on any field.
+     *
+     * @param  list<array<string, string>>  $rows
+     * @param  array<string, mixed>  $params
+     * @return list<array<string, string>>
+     */
+    private static function search(array $rows, array $params): array
+    {
+        foreach ($params['filter'] ?? [] as $field => $values) {
+            $rows = array_filter($rows, fn ($r) => in_array($r[$field] ?? null, (array) $values, true));
+        }
+
+        if (! empty($params['search'])) {
+            $rows = array_filter($rows, function ($r) use ($params) {
+                foreach ($params['search'] as $field => $needle) {
+                    if (stripos($r[$field] ?? '', (string) $needle) !== false) {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+        }
+
+        return array_slice(array_values($rows), 0, (int) ($params['limit'] ?? 1000));
     }
 
     /** @return list<array<string, string>> */
