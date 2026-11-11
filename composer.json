@@ -9,6 +9,9 @@
         "php": "^8.3",
         "filament/filament": "^5.11",
         "laravel/framework": "^13.17",
+        "laravel/mcp": "^1.2",
+        "laravel/sanctum": "^4.4",
+        "laravel/socialite": "^5.32",
         "laravel/tinker": "^3.0"
     },
     "require-dev": {

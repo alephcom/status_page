@@ -13,7 +13,29 @@
         </label>
         @error('email')<p class="error">{{ $message }}</p>@enderror
         @include('status.partials.component-checkboxes', ['selected' => array_map('intval', old('components', []))])
-        <button type="submit">Subscribe</button>
+        <div class="form-actions">
+            <button type="submit">Subscribe</button>
+            @if (\App\Http\Controllers\GoogleAuthController::enabled())
+                <span class="muted">or</span>
+                <button type="submit" class="google" formaction="{{ route('subscribe.google') }}" formnovalidate>@include('status.partials.google-logo') Subscribe with Google</button>
+            @endif
+            @if (\App\Telegram\TelegramClient::enabled())
+                <button type="submit" class="telegram" formaction="{{ route('subscribe.telegram') }}" formnovalidate>@include('status.partials.telegram-logo') Get updates on Telegram</button>
+            @endif
+        </div>
+        @php($google = \App\Http\Controllers\GoogleAuthController::enabled())
+        @php($telegram = \App\Telegram\TelegramClient::enabled())
+        @if ($google || $telegram)
+            <p class="muted">
+                @if ($google)With Google there is no confirmation e-mail: your address is already verified.@endif
+                @if ($telegram)Telegram opens <a href="{{ \App\Telegram\TelegramClient::startLink() }}">{{ '@'.\App\Telegram\TelegramClient::botUsername() }}</a>; press Start, and send /stop there to unsubscribe. You can also add the bot to a group.@endif
+            </p>
+        @endif
     </form>
+    @if (\App\Http\Controllers\GoogleAuthController::enabled())
+        <p>Already subscribed? <a href="{{ route('auth.google', 'manage') }}">Sign in with Google</a> or use the link in any of our e-mails to change or cancel your subscription.</p>
+    @else
+        <p>Already subscribed? Use the link in any of our e-mails to change or cancel your subscription.</p>
+    @endif
 </section>
 @endsection

@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\StatusSources\StatusSourceManager;
 use App\Zabbix\ZabbixClient;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -16,6 +18,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        // Telegram allows about 30 messages per second per bot.
+        RateLimiter::for('telegram', fn () => Limit::perSecond(25));
     }
 }

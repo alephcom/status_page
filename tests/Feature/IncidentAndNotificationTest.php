@@ -138,4 +138,18 @@ class IncidentAndNotificationTest extends TestCase
         $this->delete(route('subscription.destroy', $sub))->assertRedirect('/');
         $this->assertModelMissing($sub);
     }
+
+    public function test_every_component_is_refreshed_even_if_an_earlier_one_is_unchanged(): void
+    {
+        // An override keeps the first component's status fixed, so its refresh returns false.
+        $pinned = Component::create(['name' => 'Pinned', 'manual_status' => ComponentStatus::Degraded]);
+        $other = Component::create(['name' => 'Other']);
+
+        $m = Maintenance::create(['title' => 'Now', 'scheduled_start' => now()->subMinute(), 'scheduled_end' => now()->addHour()]);
+        $m->components()->sync([$pinned->id, $other->id]);
+        app(MaintenanceManager::class)->saved($m);
+
+        $this->assertSame(ComponentStatus::Degraded, $pinned->fresh()->status);
+        $this->assertSame(ComponentStatus::Maintenance, $other->fresh()->status);
+    }
 }

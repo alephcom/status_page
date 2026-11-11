@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    // Google sign-in for subscribers and the admin panel. The redirect URI
+    // to register in Google Cloud Console is APP_URL/auth/google/callback.
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => '/auth/google/callback',
+    ],
+
+    // Telegram bot for notifications. Run `php artisan statuspage:telegram-setup`
+    // after setting these to register the webhook.
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'bot_username' => env('TELEGRAM_BOT_USERNAME'),
+    ],
+
 ];

@@ -90,6 +90,8 @@ class Incident extends Model
     /** Recompute the status of every component this incident touches. */
     public function refreshComponentStatuses(): void
     {
-        $this->components()->get()->each->refreshStatus();
+        $this->components()->get()->each(function (Component $c): void {
+            $c->refreshStatus();
+        });
     }
 }

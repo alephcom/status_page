@@ -12,9 +12,12 @@ Inspired by [ChalmersLibrary/zabbix-public-statuspage](https://github.com/Chalme
 - **Planned maintenance** managed in the app. Affected components show "Under maintenance" during the window.
 - **Uptime history.** 90-day bars per component, computed from a local status-change log.
 - **Manual overrides** per component, with an optional expiry.
-- **Subscribers.** E-mail with double opt-in and per-component filtering. Also an Atom feed and signed webhooks.
+- **Subscribers.** E-mail with double opt-in and per-component filtering, or one-click sign-up with Google. Also an Atom feed and signed webhooks.
+- **Google sign-in** (optional) for subscribers and for admin panel staff.
+- **Telegram** (optional): people subscribe through a bot, and admins can post to channels and groups.
 - **Admin panel** at `/admin`. Editors handle incidents and maintenance. Admins also manage components, users, webhooks, subscribers and settings.
 - **Read-only JSON API** at `/api/v1/{status,components,incidents,maintenances}`.
+- **MCP server** at `/mcp`, so AI assistants and agents can read status and manage incidents and maintenance. See [MCP server](#mcp-server).
 - **Stale handling.** If Zabbix is unreachable, the last known statuses stay up and the page says the data may be out of date.
 - **Views:** `/` (normal), `/?view=compact` (wall displays), `/?view=micro` (phones).
 
@@ -118,6 +121,72 @@ Run the tests:
 ```bash
 php artisan test
 ```
+
+## Google sign-in
+
+Optional. When `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set, Google buttons appear; otherwise nothing changes.
+
+- **Subscribers:** "Subscribe with Google" on `/subscribe` creates a confirmed subscription straight away, since Google has verified the address. "Sign in with Google" opens an existing subscription. The e-mail link still works.
+- **Staff:** "Sign in with Google" on `/admin/login` signs in an existing admin or editor whose e-mail matches the Google account. It never creates admin accounts. Password login still works.
+- Subscribing with Google never signs anyone in to the admin panel.
+
+Setup in [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
+1. Configure the OAuth consent screen (user type "External" so anyone with a Google account can subscribe). Only the `openid` and `email` scopes are requested.
+2. Create an OAuth client ID of type "Web application" with the authorised redirect URI `<APP_URL>/auth/google/callback`.
+3. Put the client ID and secret in `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Make sure `APP_URL` matches the public URL.
+
+## Telegram
+
+Optional. Telegram chats get the same notifications as e-mail subscribers (incidents, incident updates, maintenance, and component changes if that setting is on), filtered by component.
+
+- **Subscribers:** "Get updates on Telegram" on `/subscribe` opens the bot with the ticked components, and pressing Start subscribes. People can also message the bot directly or add it to a group. Commands: `/start`, `/stop`, `/status`, `/help`.
+- **Channels and groups:** admins add them under **Notifications → Telegram Chats** (`@channelname` or a numeric chat id). The bot must be an admin of a channel to post there. A test message is sent when one is added, and errors are shown in the list.
+- Chats that block or remove the bot are dropped automatically. Admin-added chats are kept, with the error shown.
+- Sending is queued and limited to 25 messages per second, below Telegram's limit.
+
+Setup:
+1. Create a bot with [@BotFather](https://t.me/BotFather) and put its token and username in `.env` as `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME`.
+2. With `APP_URL` set to the public HTTPS URL, run:
+
+```bash
+php artisan statuspage:telegram-setup
+```
+
+This registers the webhook (`/telegram/webhook`, authenticated with a secret derived from `APP_KEY`) and the bot's command menu. Run it again if the URL, token or `APP_KEY` changes.
+
+## MCP server
+
+`/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) endpoint (streamable HTTP, via `laravel/mcp`). It needs a bearer token belonging to an admin or editor. Create one in the admin panel under **Settings → API tokens**:
+- Editors manage their own tokens.
+- Admins see and revoke everyone's, and can issue a token for another user, e.g. a dedicated account for an on-call agent.
+- Tokens can have an expiry date. The token is shown only once.
+
+Or from the command line:
+
+```bash
+php artisan statuspage:mcp-token you@example.com --name=claude
+```
+
+Revoke it with `--revoke --name=claude`. Deleting a user revokes their tokens. Then add the server to your client, e.g. Claude Code:
+
+```bash
+claude mcp add --transport http statuspage https://status.example.com/mcp --header "Authorization: Bearer <token>"
+```
+
+Read tools (they also show hidden drafts):
+- `get-status`: overall status, components, open incidents, upcoming maintenance
+- `list-components`, `get-component` (active Zabbix problems, uptime)
+- `list-incidents`, `get-incident` (full timeline)
+- `list-maintenances`
+
+Write tools, which go through the same services as the admin panel:
+- `create-incident`: `visible` is required. `false` saves a hidden draft, `true` publishes it and notifies subscribers.
+- `post-incident-update`: adds a timeline entry and sets the status. Use `resolved` to resolve.
+- `update-incident`: title, impact, components, forced component status; `visible: true` publishes a draft.
+- `schedule-maintenance`, `update-maintenance` (reschedule, or end early), `cancel-maintenance` (deletes it)
+- `set-component-override`: admins only, and hidden from editors
+
+Updates are attributed to the token's user. The endpoint is limited to 60 requests per minute per token.
 
 ## Webhooks
 

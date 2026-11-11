@@ -20,7 +20,10 @@ class EditIncident extends EditRecord
             Action::make('view')->label('View public page')->color('gray')
                 ->url(fn (Incident $record) => route('incidents.show', $record), shouldOpenInNewTab: true)
                 ->visible(fn (Incident $record) => $record->visible),
-            DeleteAction::make()->after(fn (Incident $record) => $record->components->each->refreshStatus()),
+            // A closure without a return value: each() stops early if it gets false.
+            DeleteAction::make()->after(fn (Incident $record) => $record->components->each(function ($c): void {
+                $c->refreshStatus();
+            })),
         ];
     }
 
