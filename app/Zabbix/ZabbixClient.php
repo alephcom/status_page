@@ -214,6 +214,21 @@ class ZabbixClient
     }
 
     /**
+     * Host groups whose name contains the search string, for admin pickers.
+     *
+     * @return list<array{groupid: string, name: string}>
+     */
+    public function searchHostGroups(string $search, int $limit = 50): array
+    {
+        return $this->call('hostgroup.get', [
+            'output' => ['groupid', 'name'],
+            'search' => ['name' => $search],
+            'limit' => $limit,
+            'sortfield' => 'name',
+        ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $params
      */
     private function request(string $method, array $params, bool $authenticated = true): mixed

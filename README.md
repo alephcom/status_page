@@ -7,6 +7,7 @@ Inspired by [ChalmersLibrary/zabbix-public-statuspage](https://github.com/Chalme
 ## Features
 
 - **Components and groups.** Each component's status (operational, degraded, partial outage, major outage, maintenance) is derived from Zabbix triggers on hosts and/or host groups.
+  Hosts and host groups are picked with search-as-you-type lookups against the Zabbix API.
 - **Incidents** with a timeline (investigating → identified → monitoring → resolved), markdown updates, and an optional component status that applies while the incident is open. Hidden drafts are supported. Also:
   - **templates** for recurring problems;
   - **scheduled updates**, posted automatically at a set time;

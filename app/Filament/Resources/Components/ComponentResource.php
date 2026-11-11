@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Components;
 use App\Enums\ComponentStatus;
 use App\Enums\ComponentVisibility;
 use App\Filament\Concerns\AdminOnly;
+use App\Filament\Support\ZabbixLookup;
 use App\Models\Component;
 use App\Services\MetricPoller;
 use App\StatusSources\StatusSourceManager;
@@ -102,11 +103,22 @@ class ComponentResource extends Resource
                                 ->default('zabbix_host')
                                 ->required()
                                 ->live(),
-                            TagsInput::make('config.hosts')->label('Zabbix hosts')
-                                ->placeholder('host name, then Enter')
-                                ->helperText('Technical or visible host names.')
+                            Select::make('config.hosts')->label('Zabbix hosts')
+                                ->multiple()
+                                ->searchable()
+                                ->searchDebounce(400)
+                                ->searchPrompt('Type at least 2 characters to search Zabbix')
+                                ->getSearchResultsUsing(fn (?string $search) => ZabbixLookup::hosts($search))
+                                ->getOptionLabelsUsing(fn (array $values) => ZabbixLookup::labels($values))
+                                ->helperText('Searches host and visible names in Zabbix.')
                                 ->visible(fn (Get $get) => $get('driver') === 'zabbix_host'),
-                            TagsInput::make('config.host_groups')->label('Zabbix host groups')
+                            Select::make('config.host_groups')->label('Zabbix host groups')
+                                ->multiple()
+                                ->searchable()
+                                ->searchDebounce(400)
+                                ->searchPrompt('Type at least 2 characters to search Zabbix')
+                                ->getSearchResultsUsing(fn (?string $search) => ZabbixLookup::hostGroups($search))
+                                ->getOptionLabelsUsing(fn (array $values) => ZabbixLookup::labels($values))
                                 ->visible(fn (Get $get) => $get('driver') === 'zabbix_host'),
                             TagsInput::make('config.services')->label('Zabbix services')
                                 ->placeholder('service name, then Enter')
