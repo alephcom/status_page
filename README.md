@@ -121,13 +121,18 @@ php artisan test
 
 ## MCP server
 
-`/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) endpoint (streamable HTTP, via `laravel/mcp`). It needs a bearer token belonging to an admin or editor:
+`/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) endpoint (streamable HTTP, via `laravel/mcp`). It needs a bearer token belonging to an admin or editor. Create one in the admin panel under **Settings → API tokens**:
+- Editors manage their own tokens.
+- Admins see and revoke everyone's, and can issue a token for another user, e.g. a dedicated account for an on-call agent.
+- Tokens can have an expiry date. The token is shown only once.
+
+Or from the command line:
 
 ```bash
 php artisan statuspage:mcp-token you@example.com --name=claude
 ```
 
-Revoke it with `--revoke --name=claude`. Then add the server to your client, e.g. Claude Code:
+Revoke it with `--revoke --name=claude`. Deleting a user revokes their tokens. Then add the server to your client, e.g. Claude Code:
 
 ```bash
 claude mcp add --transport http statuspage https://status.example.com/mcp --header "Authorization: Bearer <token>"

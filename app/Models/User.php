@@ -29,6 +29,12 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
+    protected static function booted(): void
+    {
+        // Sanctum tokens are polymorphic, so nothing cascades them.
+        static::deleting(fn (User $user) => $user->tokens()->delete());
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->role instanceof UserRole;
