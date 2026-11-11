@@ -1,0 +1,52 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:80"
+    env_file: .env
+    environment: &db
+      DB_CONNECTION: mariadb
+      DB_HOST: db
+      DB_DATABASE: statuspage
+      DB_USERNAME: statuspage
+      DB_PASSWORD: ${DB_PASSWORD:-statuspage}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Sends e-mail and webhooks.
+  worker:
+    build: .
+    command: php artisan queue:work --tries=3 --max-time=3600
+    env_file: .env
+    environment: *db
+    depends_on: [app]
+    restart: unless-stopped
+
+  # Polls Zabbix every 30 s and rolls up uptime.
+  scheduler:
+    build: .
+    command: php artisan schedule:work
+    env_file: .env
+    environment: *db
+    depends_on: [app]
+    restart: unless-stopped
+
+  db:
+    image: mariadb:11
+    environment:
+      MARIADB_DATABASE: statuspage
+      MARIADB_USER: statuspage
+      MARIADB_PASSWORD: ${DB_PASSWORD:-statuspage}
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  db:
