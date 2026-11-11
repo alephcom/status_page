@@ -34,7 +34,7 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('filament.auth.google-button'))
             ->brandName(fn () => Setting::get('site_name').' admin')
             ->favicon(fn () => asset('favicon.svg'))
-            ->colors(['primary' => Color::hex('#1853de')])
+            ->colors(['primary' => Color::generateV3Palette('#1853de')])
             ->navigationGroups(['Communication', 'Components', 'Notifications', 'Settings'])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
