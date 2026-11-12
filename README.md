@@ -104,12 +104,23 @@ php artisan migrate
 php artisan statuspage:make-admin you@example.com
 ```
 
-Run these alongside the web server. The scheduler runs these jobs:
-- the Zabbix poll;
+Install the cron jobs for the user that runs the app (for example `sudo crontab -u www-data -e`), replacing `/var/www/status_page` with your install path:
+
+```cron
+* * * * * cd /var/www/status_page && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /var/www/status_page && php artisan queue:work --stop-when-empty --tries=3 --max-time=55 >> /dev/null 2>&1
+```
+
+The first line is the scheduler. It runs these jobs:
+- the Zabbix poll, every 30 seconds;
 - uptime roll-ups;
 - `statuspage:tick` every minute: maintenance notices, recurring windows, scheduled updates and stale-data alerts;
 - graph fetching;
 - a nightly `statuspage:prune`.
+
+The second line sends queued e-mail and webhooks. Each run drains the queue and exits.
+
+For local development, run these in two terminals instead of installing cron:
 
 ```bash
 php artisan schedule:work
