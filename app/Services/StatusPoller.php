@@ -57,6 +57,8 @@ class StatusPoller
             });
 
         $changed = 0;
+        /** @var list<int> $unknown components whose sources did not all answer */
+        $unknown = [];
 
         foreach ($components as $component) {
             $usable = $component->sources->reject(fn (ComponentSource $s) => in_array($s->driver, $failedDrivers, true));
@@ -65,6 +67,8 @@ class StatusPoller
             // otherwise a partial picture could flip a component to green.
             if ($usable->count() === $component->sources->count()) {
                 $this->applyResults($component, $component->sources->map(fn ($s) => $results[$s->id] ?? null)->filter()->all());
+            } else {
+                $unknown[] = $component->id;
             }
 
             if ($component->refreshStatus()) {
@@ -73,9 +77,7 @@ class StatusPoller
             }
         }
 
-        if ($errors === []) {
-            $this->checkRecoveries();
-        }
+        $this->checkRecoveries($unknown);
 
         $now = now();
 
@@ -175,16 +177,23 @@ class StatusPoller
     /**
      * For incidents that monitoring opened: once every component is healthy
      * again, resolve hidden drafts or flag the incident for staff. If the
-     * problem comes back, the flag is cleared.
+     * problem comes back, the flag is cleared. Incidents on a component whose
+     * sources failed this pass are left alone, as their state is unknown.
+     *
+     * @param  list<int>  $unknown  ids of components without fresh results
      */
-    private function checkRecoveries(): void
+    private function checkRecoveries(array $unknown = []): void
     {
         $resolveDrafts = (bool) Setting::get('auto_resolve_recovered_drafts');
 
         Incident::query()->unresolved()->where('auto_created', true)
             ->with(['components' => fn ($q) => $q->withCount('activeProblems')])
             ->get()
-            ->each(function (Incident $incident) use ($resolveDrafts): void {
+            ->each(function (Incident $incident) use ($resolveDrafts, $unknown): void {
+                if ($incident->components->contains(fn (Component $c) => in_array($c->id, $unknown, true))) {
+                    return;
+                }
+
                 $healthy = $incident->components->isNotEmpty() && $incident->components->every(
                     fn (Component $c) => $c->auto_status === ComponentStatus::Operational && $c->active_problems_count === 0,
                 );

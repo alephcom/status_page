@@ -45,7 +45,10 @@ class ZabbixFixtures
         }
 
         return match ($method) {
-            'trigger.get' => $result($ok ? [] : self::triggers($newer ? 'hostgroups' : 'groups')),
+            'trigger.get' => $result(isset($params['triggerids'])
+                ? self::triggersById((array) $params['triggerids'])
+                : ($ok ? [] : self::triggers($newer ? 'hostgroups' : 'groups'))),
+            'problem.get' => $result(array_values(array_filter(self::problems($ok), fn ($p) => in_array($p['eventid'], array_map('strval', (array) ($params['eventids'] ?? [])), true)))),
             'hostgroup.get' => $result(self::search(self::groups(), $params)),
             'host.get' => $result(self::search(self::hosts(), $params)),
             'service.get' => $result(array_values(array_filter(self::services($ok), fn ($svc) => in_array($svc['name'], (array) ($params['filter']['name'] ?? []), true)))),
@@ -145,7 +148,10 @@ class ZabbixFixtures
     }
 
     /**
-     * IT services: "Web shop" has a High problem (unless all is OK), "Payments" is fine.
+     * IT services: "Web shop" has a High problem (unless all is OK), "Payments"
+     * is fine. "Legacy site" still reports a High problem whose trigger was
+     * deleted along with its host: Zabbix keeps such orphans until the
+     * housekeeper runs, and the service keeps counting them.
      *
      * @return list<array<string, mixed>>
      */
@@ -155,7 +161,40 @@ class ZabbixFixtures
             ['serviceid' => '1', 'name' => 'Web shop', 'status' => $ok ? '-1' : '4',
                 'problem_events' => $ok ? [] : [['eventid' => '7001', 'severity' => '4', 'name' => 'Checkout failing']]],
             ['serviceid' => '2', 'name' => 'Payments', 'status' => '-1', 'problem_events' => []],
+            ['serviceid' => '3', 'name' => 'Legacy site', 'status' => '4',
+                'problem_events' => [['eventid' => '7002', 'severity' => '4', 'name' => 'Unavailable by ICMP ping']]],
         ];
+    }
+
+    /**
+     * Open problems by event id. 7002 points at trigger 199, which no longer exists.
+     *
+     * @return list<array<string, string>>
+     */
+    public static function problems(bool $ok = false): array
+    {
+        return array_values(array_filter([
+            $ok ? null : ['eventid' => '7001', 'objectid' => '106', 'r_eventid' => '0'],
+            ['eventid' => '7002', 'objectid' => '199', 'r_eventid' => '0'],
+        ]));
+    }
+
+    /**
+     * trigger.get by id: the problem triggers plus the one behind "Web shop".
+     * Trigger 199 (deleted with its host) is deliberately absent.
+     *
+     * @param  list<string|int>  $ids
+     * @return list<array{triggerid: string}>
+     */
+    private static function triggersById(array $ids): array
+    {
+        $known = [...array_column(self::triggers(), 'triggerid'), '106'];
+        $ids = array_map('strval', $ids);
+
+        return array_values(array_map(
+            fn ($id) => ['triggerid' => $id],
+            array_filter($known, fn ($id) => in_array($id, $ids, true)),
+        ));
     }
 
     /**

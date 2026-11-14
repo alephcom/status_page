@@ -153,6 +153,53 @@ class ZabbixClient
     }
 
     /**
+     * Of the given problem event ids, those that are still real: unresolved,
+     * and raised by a trigger that still exists on a monitored host.
+     *
+     * Zabbix keeps problems of deleted triggers (e.g. after deleting a host)
+     * until the housekeeper runs, and IT services keep counting them. This
+     * lets a source ignore such orphans.
+     *
+     * @param  list<string>  $eventids
+     * @return list<string>
+     */
+    public function liveProblemIds(array $eventids): array
+    {
+        $eventids = array_values(array_unique(array_map('strval', $eventids)));
+
+        if ($eventids === []) {
+            return [];
+        }
+
+        $problems = collect($this->call('problem.get', [
+            'output' => ['eventid', 'objectid', 'r_eventid'],
+            'eventids' => $eventids,
+            'source' => 0,
+            'object' => 0,
+            'recent' => false,
+        ]))->filter(fn (array $p) => (string) ($p['r_eventid'] ?? '0') === '0');
+
+        $triggerIds = $problems->pluck('objectid')->map(fn ($id) => (string) $id)->unique()->values()->all();
+
+        if ($triggerIds === []) {
+            return [];
+        }
+
+        $existing = collect($this->call('trigger.get', [
+            'output' => ['triggerid'],
+            'triggerids' => $triggerIds,
+            'monitored' => true,
+        ]))->pluck('triggerid')->map(fn ($id) => (string) $id)->all();
+
+        return $problems
+            ->filter(fn (array $p) => in_array((string) $p['objectid'], $existing, true))
+            ->pluck('eventid')
+            ->map(fn ($id) => (string) $id)
+            ->values()
+            ->all();
+    }
+
+    /**
      * A numeric item on a host (technical or visible name), or null.
      *
      * @return array{itemid: string, value_type: int, units: string, name: string}|null

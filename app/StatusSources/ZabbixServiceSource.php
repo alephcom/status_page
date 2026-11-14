@@ -38,14 +38,19 @@ class ZabbixServiceSource implements StatusSource
         $names = $configs->flatMap(fn ($c) => $c['services'])->unique()->values()->all();
         $services = collect($this->client->services($names))->keyBy(fn ($s) => mb_strtolower($s['name']));
 
-        return $configs->map(fn (array $config) => $this->resultFor($config, $services->all()))->all();
+        $eventids = $services->flatMap(fn ($s) => array_column($s['problem_events'] ?? [], 'eventid'))->all();
+        $live = $eventids === [] ? [] : $this->client->liveProblemIds($eventids);
+
+        return $configs->map(fn (array $config) => $this->resultFor($config, $services->all(), $live))->all();
     }
 
     /**
      * @param  array<string, mixed>  $config
      * @param  array<string, array<string, mixed>>  $services  keyed by lower-case name
+     * @param  list<string>|null  $live  problem event ids that are still real
+     *                                   (see ZabbixClient::liveProblemIds); null = trust Zabbix as is
      */
-    public function resultFor(array $config, array $services): SourceResult
+    public function resultFor(array $config, array $services, ?array $live = null): SourceResult
     {
         $map = $config['severity_map'];
         $statuses = [];
@@ -58,7 +63,23 @@ class ZabbixServiceSource implements StatusSource
                 continue;
             }
 
-            $mapped = $map[(int) $service['status']] ?? 'ignore';
+            $events = $service['problem_events'] ?? [];
+            $severity = (int) $service['status'];
+
+            // Zabbix keeps counting problems whose trigger was deleted (e.g.
+            // with its host) until the housekeeper runs. Drop those and take
+            // the status from what is left; if nothing is, the service is OK.
+            if ($live !== null && $events !== []) {
+                $events = array_values(array_filter($events, fn ($e) => in_array((string) $e['eventid'], $live, true)));
+
+                if ($events === []) {
+                    continue;
+                }
+
+                $severity = max(array_map(fn ($e) => (int) ($e['severity'] ?? 0), $events));
+            }
+
+            $mapped = $map[$severity] ?? 'ignore';
 
             if ($mapped === 'ignore') {
                 continue;
@@ -66,7 +87,7 @@ class ZabbixServiceSource implements StatusSource
 
             $statuses[] = ComponentStatus::from($mapped);
 
-            foreach ($service['problem_events'] ?? [] as $event) {
+            foreach ($events as $event) {
                 $severity = (int) ($event['severity'] ?? 0);
                 $eventStatus = $map[$severity] ?? 'ignore';
 
