@@ -156,5 +156,7 @@
     "This password reset link is invalid or has expired.": "Este enlace no es válido o ha caducado.",
     "Your password was reset. You can sign in now.": "Tu contraseña se ha restablecido. Ya puedes iniciar sesión.",
     "You are subscribed.": "Ya estás suscrito.",
-    "Your password was changed.": "Tu contraseña se ha cambiado."
+    "Your password was changed.": "Tu contraseña se ha cambiado.",
+    "Incidents": "Incidentes",
+    ":count second|:count seconds": ":count segundo|:count segundos"
 }

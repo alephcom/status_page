@@ -156,5 +156,7 @@
     "This password reset link is invalid or has expired.": "Deze link is ongeldig of verlopen.",
     "Your password was reset. You can sign in now.": "Uw wachtwoord is opnieuw ingesteld. U kunt nu inloggen.",
     "You are subscribed.": "U bent geabonneerd.",
-    "Your password was changed.": "Uw wachtwoord is gewijzigd."
+    "Your password was changed.": "Uw wachtwoord is gewijzigd.",
+    "Incidents": "Storingen",
+    ":count second|:count seconds": ":count seconde|:count seconden"
 }

@@ -84,6 +84,47 @@ class UptimeCalculator
     }
 
     /**
+     * Status periods for one component on one day, clipped to the day (and
+     * to now / the component's creation), oldest first.
+     *
+     * @return list<array{status: ComponentStatus, from: CarbonImmutable, to: CarbonImmutable}>
+     */
+    public function periods(Component $component, CarbonInterface $day, ?CarbonInterface $now = null): array
+    {
+        $start = CarbonImmutable::instance($day)->startOfDay()->max(CarbonImmutable::instance($component->created_at));
+        $end = CarbonImmutable::instance($day)->startOfDay()->addDay()->min(CarbonImmutable::instance($now ?? now()));
+
+        if ($start->greaterThanOrEqualTo($end)) {
+            return [];
+        }
+
+        $before = $component->statusChanges()->where('changed_at', '<=', $start)
+            ->orderByDesc('changed_at')->orderByDesc('id')->first(['status']);
+        $changes = $component->statusChanges()->where('changed_at', '>', $start)->where('changed_at', '<', $end)
+            ->orderBy('changed_at')->orderBy('id')->get(['status', 'changed_at']);
+
+        $periods = [];
+        $current = $before?->status;
+        $cursor = $start;
+
+        foreach ($changes as $change) {
+            if ($current !== null && $current !== $change->status) {
+                $periods[] = ['status' => $current, 'from' => $cursor, 'to' => CarbonImmutable::instance($change->changed_at)];
+                $cursor = CarbonImmutable::instance($change->changed_at);
+            } elseif ($current === null) {
+                $cursor = CarbonImmutable::instance($change->changed_at);
+            }
+            $current = $change->status;
+        }
+
+        if ($current !== null) {
+            $periods[] = ['status' => $current, 'from' => $cursor, 'to' => $end];
+        }
+
+        return array_values(array_filter($periods, fn ($p) => $p['from']->lessThan($p['to'])));
+    }
+
+    /**
      * Daily rows for the last $days days (oldest first), with nulls for days
      * without data.
      *

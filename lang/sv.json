@@ -156,5 +156,7 @@
     "This password reset link is invalid or has expired.": "Länken är ogiltig eller har gått ut.",
     "Your password was reset. You can sign in now.": "Ditt lösenord har återställts. Du kan logga in nu.",
     "You are subscribed.": "Du prenumererar nu.",
-    "Your password was changed.": "Ditt lösenord har ändrats."
+    "Your password was changed.": "Ditt lösenord har ändrats.",
+    "Incidents": "Incidenter",
+    ":count second|:count seconds": ":count sekund|:count sekunder"
 }
