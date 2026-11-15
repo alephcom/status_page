@@ -80,4 +80,26 @@ class PublicPagesTest extends TestCase
         $this->assertCount(90, $history);
         $this->assertNotNull(end($history)['row']);
     }
+
+    public function test_day_detail_shows_breakdown(): void
+    {
+        $component = Component::query()->where('name', 'Website')->first();
+        $url = route('components.day', [$component, today()->toDateString()]);
+
+        $this->get('/')->assertSee($url, false);
+        $this->get($url)->assertOk()->assertSee('Website')->assertSee('uptime');
+        $this->get($url, ['X-Requested-With' => 'fetch'])->assertOk()
+            ->assertSee('day-detail', false)->assertDontSee('<html', false);
+
+        $this->get(route('components.day', [$component, today()->addDay()->toDateString()]))->assertNotFound();
+        $this->get(route('components.day', [$component, today()->subYears(2)->toDateString()]))->assertNotFound();
+    }
+
+    public function test_day_detail_hides_private_components(): void
+    {
+        $component = Component::query()->get()->first(fn (Component $c) => $c->isPrivate());
+        $this->assertNotNull($component);
+
+        $this->get(route('components.day', [$component, today()->toDateString()]))->assertNotFound();
+    }
 }

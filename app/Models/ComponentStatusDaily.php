@@ -62,4 +62,47 @@ class ComponentStatusDaily extends Model
 
         return $present ? ComponentStatus::worst($present) : null;
     }
+
+    /**
+     * Bar segments for the uptime chart, worst status first. Each share is a
+     * percentage of the bar's height, proportional to the time spent in that
+     * status, except that any non-operational status gets at least
+     * $minShare percent so a short blip stays visible.
+     *
+     * @return list<array{status: ComponentStatus, seconds: int, share: float}>
+     */
+    public function segments(float $minShare = 15.0): array
+    {
+        $total = $this->trackedSeconds();
+
+        if ($total === 0) {
+            return [];
+        }
+
+        $segments = [];
+        foreach (array_reverse(ComponentStatus::ordered()) as $status) {
+            $seconds = $this->secondsFor($status);
+            if ($seconds > 0) {
+                $share = 100 * $seconds / $total;
+                $segments[] = [
+                    'status' => $status,
+                    'seconds' => $seconds,
+                    'share' => $status->isOperational() ? $share : max($share, $minShare),
+                ];
+            }
+        }
+
+        // Boosting small segments overfills the bar; take the excess back
+        // proportionally from the segments above the minimum.
+        $excess = array_sum(array_column($segments, 'share')) - 100;
+        if ($excess > 0) {
+            $room = array_sum(array_map(fn ($s) => max(0, $s['share'] - $minShare), $segments));
+            foreach ($segments as &$segment) {
+                $segment['share'] -= $room > 0 ? $excess * max(0, $segment['share'] - $minShare) / $room : 0;
+            }
+            unset($segment);
+        }
+
+        return $segments;
+    }
 }

@@ -8,9 +8,11 @@ use App\Models\Incident;
 use App\Models\Maintenance;
 use App\Models\Setting;
 use App\Services\StatusPageData;
+use App\Services\UptimeCalculator;
 use App\Support\Badge;
 use App\Support\ICalendar;
 use App\Support\Visibility;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -35,6 +37,47 @@ class StatusController extends Controller
         return view('status.incident', [
             'siteName' => Setting::get('site_name'),
             'incident' => Visibility::scrub($incident, $private),
+        ]);
+    }
+
+    /**
+     * One component's day from the uptime bar: time per status, the status
+     * timeline and the incidents and maintenance that touched it. Fetched
+     * with X-Requested-With: fetch it returns just the fragment for the popover.
+     */
+    public function componentDay(Request $request, Component $component, string $date, UptimeCalculator $uptime): View
+    {
+        $private = Visibility::canSeePrivate($request);
+        abort_unless($component->enabled && ($private || ! $component->isPrivate()), 404);
+
+        try {
+            $day = CarbonImmutable::createFromFormat('!Y-m-d', $date);
+        } catch (\Throwable) {
+            abort(404);
+        }
+        $today = CarbonImmutable::today();
+        abort_if(! $day || $day->greaterThan($today) || $day->lessThan($today->subDays((int) config('statuspage.uptime_days') - 1)), 404);
+
+        $dayStart = $day->startOfDay();
+        $dayEnd = $dayStart->addDay();
+        $row = $component->dailyStatus()->whereDate('date', $day)->first();
+
+        $incidents = $component->incidents()->visible()
+            ->where('started_at', '<', $dayEnd)
+            ->where(fn ($q) => $q->whereNull('resolved_at')->orWhere('resolved_at', '>=', $dayStart))
+            ->orderBy('started_at')->get();
+        $maintenances = $component->maintenances()->visible()
+            ->where('scheduled_start', '<', $dayEnd)->where('scheduled_end', '>', $dayStart)
+            ->orderBy('scheduled_start')->get();
+
+        return view($request->header('X-Requested-With') === 'fetch' ? 'status.partials.day-detail' : 'status.day', [
+            'siteName' => Setting::get('site_name'),
+            'component' => $component,
+            'day' => $day,
+            'row' => $row,
+            'periods' => $uptime->periods($component, $day),
+            'incidents' => $incidents,
+            'maintenances' => $maintenances,
         ]);
     }
 

@@ -12,6 +12,7 @@ Route::middleware(SetLocale::class)->group(function () {
     Route::get('/', [StatusController::class, 'index'])->name('status');
     Route::get('/history', [StatusController::class, 'history'])->name('history');
     Route::get('/incidents/{incident}', [StatusController::class, 'incident'])->name('incidents.show');
+    Route::get('/components/{component}/days/{date}', [StatusController::class, 'componentDay'])->where('date', '\d{4}-\d{2}-\d{2}')->name('components.day');
     Route::get('/feed.atom', [StatusController::class, 'feed'])->name('feed');
     Route::get('/maintenance.ics', [StatusController::class, 'calendar'])->name('calendar');
     Route::get('/badge.svg', [StatusController::class, 'badge'])->name('badge');

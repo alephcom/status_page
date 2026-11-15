@@ -551,12 +551,108 @@ pre {
     --c: var(--nodata);
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     border-radius: 3px;
     background: var(--c);
 }
 
+.bar-seg {
+    flex: none;
+    background: var(--c);
+}
+
+.bar-seg:last-child {
+    flex: 1;
+}
+
 .bar:hover {
     opacity: .65;
+}
+
+a.bar {
+    cursor: pointer;
+}
+
+.day-popover {
+    position: absolute;
+    z-index: 50;
+    width: min(340px, calc(100vw - 16px));
+    padding: .8rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .15);
+    font-size: .85rem;
+}
+
+.day-detail-head {
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
+}
+
+.day-detail-uptime {
+    margin: .3rem 0 .5rem;
+    font-weight: 600;
+}
+
+.day-detail h4 {
+    margin: .7rem 0 .2rem;
+    font-size: .8rem;
+}
+
+.day-breakdown,
+.day-periods,
+.day-links {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.day-breakdown li,
+.day-periods li {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+}
+
+.day-breakdown .muted,
+.day-periods .muted {
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.day-period-time {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.day-periods {
+    margin-top: .5rem;
+}
+
+.day-timeline {
+    display: flex;
+    height: 8px;
+    margin: .6rem 0 0;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--nodata);
+}
+
+.day-timeline span {
+    min-width: 2px;
+    background: var(--c);
+}
+
+.dot {
+    flex: none;
+    width: .55em;
+    height: .55em;
+    border-radius: 50%;
+    background: var(--c);
 }
 
 .uptime-legend {

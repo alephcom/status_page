@@ -92,3 +92,55 @@
     var root = document.getElementById('status-root');
     if (root && window.MutationObserver) new MutationObserver(function () { bindAll(root); }).observe(root, { childList: true });
 })();
+
+// Uptime bars: click a day for its breakdown, timeline and incidents.
+(function () {
+    var pop = null, current = null;
+
+    function close() {
+        if (pop) pop.remove();
+        pop = current = null;
+    }
+
+    function place(bar) {
+        var b = bar.getBoundingClientRect(), w = pop.offsetWidth;
+        var left = Math.min(window.innerWidth - w - 8, Math.max(8, b.left + b.width / 2 - w / 2));
+        pop.style.left = left + window.scrollX + 'px';
+        pop.style.top = b.bottom + window.scrollY + 8 + 'px';
+    }
+
+    document.addEventListener('click', function (e) {
+        var bar = e.target.closest && e.target.closest('a[data-day]');
+        if (!bar) {
+            if (pop && !pop.contains(e.target)) close();
+            return;
+        }
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+        e.preventDefault();
+        var href = bar.getAttribute('href');
+        if (current === href) { close(); return; }
+        close();
+        current = href;
+        pop = document.createElement('div');
+        pop.className = 'day-popover';
+        pop.setAttribute('role', 'dialog');
+        pop.textContent = '…';
+        document.body.appendChild(pop);
+        place(bar);
+        fetch(href, { headers: { 'X-Requested-With': 'fetch' } })
+            .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+            .then(function (html) {
+                if (current !== href) return;
+                pop.innerHTML = html;
+                pop.querySelectorAll('time[datetime]').forEach(function (el) {
+                    var d = new Date(el.getAttribute('datetime'));
+                    if (!isNaN(d)) el.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                });
+                place(bar);
+            })
+            .catch(function () { if (current === href) window.location.href = href; });
+    });
+
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    window.addEventListener('resize', close);
+})();

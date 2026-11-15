@@ -115,5 +115,7 @@
     "Completed": "Terminée",
     "Daily": "Quotidienne",
     "Weekly": "Hebdomadaire",
-    "Monthly": "Mensuelle"
+    "Monthly": "Mensuelle",
+    "Incidents": "Incidents",
+    ":count second|:count seconds": ":count seconde|:count secondes"
 }

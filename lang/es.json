@@ -115,5 +115,7 @@
     "Completed": "Completado",
     "Daily": "Diaria",
     "Weekly": "Semanal",
-    "Monthly": "Mensual"
+    "Monthly": "Mensual",
+    "Incidents": "Incidentes",
+    ":count second|:count seconds": ":count segundo|:count segundos"
 }

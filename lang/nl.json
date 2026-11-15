@@ -115,5 +115,7 @@
     "Completed": "Voltooid",
     "Daily": "Dagelijks",
     "Weekly": "Wekelijks",
-    "Monthly": "Maandelijks"
+    "Monthly": "Maandelijks",
+    "Incidents": "Storingen",
+    ":count second|:count seconds": ":count seconde|:count seconden"
 }

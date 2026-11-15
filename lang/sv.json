@@ -115,5 +115,7 @@
     "Completed": "Avslutat",
     "Daily": "Dagligen",
     "Weekly": "Varje vecka",
-    "Monthly": "Varje månad"
+    "Monthly": "Varje månad",
+    "Incidents": "Incidenter",
+    ":count second|:count seconds": ":count sekund|:count sekunder"
 }
