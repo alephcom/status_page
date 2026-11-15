@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
@@ -23,13 +24,14 @@ use Throwable;
  * - subscribe: create (or find) a subscription for the Google address. Google
  *   has verified the address, so no confirmation e-mail is needed.
  * - manage: open an existing subscription without waiting for an e-mail.
+ * - account: sign in to (or create) a public account for the Google address.
  * - admin: sign in to the admin panel, only as an existing admin or editor.
  *
- * Subscribers never become Users; signing in as one grants no admin access.
+ * Accounts created here have no role, so they grant no admin access.
  */
 class GoogleAuthController extends Controller
 {
-    private const INTENTS = ['subscribe', 'manage', 'admin'];
+    private const INTENTS = ['subscribe', 'manage', 'account', 'admin'];
 
     public static function enabled(): bool
     {
@@ -51,10 +53,10 @@ class GoogleAuthController extends Controller
         return $this->toGoogle($request, 'subscribe');
     }
 
-    /** GET for "manage" and "admin". */
+    /** GET for "manage", "account" and "admin". */
     public function redirect(Request $request, string $intent): SymfonyRedirect
     {
-        abort_unless(in_array($intent, ['manage', 'admin'], true), 404);
+        abort_unless(in_array($intent, ['manage', 'account', 'admin'], true), 404);
 
         return $this->toGoogle($request, $intent);
     }
@@ -71,9 +73,11 @@ class GoogleAuthController extends Controller
             return redirect()->route('status');
         }
 
-        $failed = fn (string $message) => $intent === 'admin'
-            ? redirect(Filament::getLoginUrl())->with('google_error', $message)
-            : redirect()->route('subscribe')->with('error', $message);
+        $failed = fn (string $message) => match ($intent) {
+            'admin' => redirect(Filament::getLoginUrl())->with('google_error', $message),
+            'account' => redirect()->route('login')->with('error', $message),
+            default => redirect()->route('subscribe')->with('error', $message),
+        };
 
         if ($request->has('error')) {
             return $failed('Google sign-in was cancelled.');
@@ -98,6 +102,7 @@ class GoogleAuthController extends Controller
         return match ($intent) {
             'admin' => $this->signInToAdmin($request, $email, $failed),
             'manage' => $this->manage($email),
+            'account' => $this->signInToAccount($request, $email, $google->getName()),
             'subscribe' => $this->subscribeAs($email, $components, $minImpact),
         };
     }
@@ -130,6 +135,25 @@ class GoogleAuthController extends Controller
         $request->session()->regenerate();
 
         return redirect()->intended(Filament::getPanel('admin')->getUrl());
+    }
+
+    private function signInToAccount(Request $request, string $email, ?string $name): RedirectResponse
+    {
+        $user = AccountAuthController::findByEmail($email) ?? User::create([
+            'name' => filled($name) ? $name : (strstr($email, '@', true) ?: $email),
+            'email' => $email,
+            'password' => Str::random(40),
+        ]);
+
+        // Google has verified the address.
+        if (! $user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+        }
+
+        Auth::login($user, remember: true);
+        $request->session()->regenerate();
+
+        return redirect()->intended(route('account'));
     }
 
     private function manage(string $email): RedirectResponse

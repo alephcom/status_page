@@ -34,6 +34,11 @@
         </a>
         <nav aria-label="{{ __('Main') }}">
             <a href="{{ route('history') }}">{{ __('History') }}</a>
+            @auth
+                <a href="{{ route('account') }}">{{ __('Account') }}</a>
+            @else
+                <a href="{{ route('login') }}">{{ __('Sign in') }}</a>
+            @endauth
             <a class="cta" href="{{ route('subscribe') }}">{{ __('Subscribe') }}</a>
         </nav>
     </div>

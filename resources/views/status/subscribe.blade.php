@@ -37,6 +37,7 @@
             </p>
         @endif
     </form>
+    <p>{!! __('Have an account? :link to manage your subscription.', ['link' => '<a href="'.e(route('login')).'">'.e(__('Sign in')).'</a>']) !!}</p>
     @if (\App\Http\Controllers\GoogleAuthController::enabled())
         <p>{!! __('Already subscribed? :link or use the link in any of our e-mails to change or cancel your subscription.', ['link' => '<a href="'.e(route('auth.google', 'manage')).'">'.e(__('Sign in with Google')).'</a>']) !!}</p>
     @else

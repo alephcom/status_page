@@ -26,10 +26,11 @@ Inspired by [ChalmersLibrary/zabbix-public-statuspage](https://github.com/Chalme
   - an iCalendar feed of maintenance;
   - signed JSON webhooks and Discord webhooks.
 - **Embedding.** SVG status badges and a JavaScript status widget for other sites.
-- **Google sign-in** (optional) for subscribers and for admin panel staff.
+- **User accounts.** People can register at `/register` (or sign in with Google) and manage their subscription, preferences and password at `/account`, without waiting for an e-mail link. The address must be confirmed first. Password reset is built in. New accounts have no admin access.
+- **Google sign-in** (optional) for subscribers, user accounts and admin panel staff.
 - **Telegram** (optional): people subscribe through a bot, and admins can post to channels and groups.
 - **Languages and branding.** The public page comes in English, German, Spanish, French, Dutch and Swedish. You can set a logo, accent colour, custom CSS, footer links and an announcement banner. Visitors can pick light or dark mode.
-- **Admin panel** at `/admin`. Editors handle incidents, maintenance and templates. Admins also manage components, users, webhooks, subscribers and settings, and see the **audit log**.
+- **Admin panel** at `/admin`. Editors handle incidents, maintenance and templates. Admins also manage components, users, webhooks, subscribers and settings, and see the **audit log**. Admins can promote any user to editor or admin (**Users → Make admin**, or change the role); users without a role only see their own account page.
 - **JSON API** at `/api/v1`: public read endpoints, plus a token-authenticated write API. See [REST API](#rest-api).
 - **MCP server** at `/mcp`, so AI assistants and agents can read status and manage incidents and maintenance. See [MCP server](#mcp-server).
 - **Stale handling.** If Zabbix is unreachable, the last known statuses stay up and the page says the data may be out of date. Admins are e-mailed if it lasts. `/health` lets outside monitoring check the page itself.
@@ -197,6 +198,7 @@ php artisan test
 Optional. When `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set, Google buttons appear; otherwise nothing changes.
 
 - **Subscribers:** "Subscribe with Google" on `/subscribe` creates a confirmed subscription straight away, since Google has verified the address. "Sign in with Google" opens an existing subscription. The e-mail link still works.
+- **User accounts:** "Sign in with Google" on `/login` and `/register` signs in to the account for that address, creating one (with no role) if needed.
 - **Staff:** "Sign in with Google" on `/admin/login` signs in an existing admin or editor whose e-mail matches the Google account. It never creates admin accounts. Password login still works.
 - Subscribing with Google never signs anyone in to the admin panel.
 
