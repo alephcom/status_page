@@ -90,6 +90,21 @@ class PublicExtrasTest extends TestCase
         $this->get(route('incidents.show', $incident))->assertOk();
     }
 
+    public function test_public_accounts_do_not_see_private_components(): void
+    {
+        Component::create(['name' => 'Portal']);
+        $internal = Component::create(['name' => 'Build farm', 'visibility' => ComponentVisibility::Private]);
+        $incident = app(IncidentManager::class)->create(['title' => 'Builds failing', 'status' => IncidentStatus::Investigating, 'impact' => IncidentImpact::Major], [$internal->id], 'x');
+
+        $this->actingAs(User::factory()->create(['role' => null]));
+
+        $this->get('/')->assertOk()->assertSee('Portal')->assertDontSee('Build farm')->assertDontSee('Builds failing');
+        $this->get(route('incidents.show', $incident))->assertNotFound();
+        $this->get(route('components.day', [$internal, today()->toDateString()]))->assertNotFound();
+        $this->getJson('/api/v1/components')->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/status')->assertJsonCount(0, 'active_incidents');
+    }
+
     public function test_announcement_branding_and_footer_links(): void
     {
         Setting::putMany([

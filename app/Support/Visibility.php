@@ -11,8 +11,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\IpUtils;
 
 /**
- * Private components are shown only to signed-in staff and to visitors from
- * allowed networks. Incidents and maintenance that only touch private
+ * Private components are shown only to signed-in staff (admins and editors,
+ * not public accounts) and to visitors from allowed networks. Incidents and maintenance that only touch private
  * components are hidden from everyone else, and private component names are
  * left out of the ones that are shown.
  */
@@ -22,7 +22,8 @@ class Visibility
     {
         $request ??= request();
 
-        if (auth('web')->check()) {
+        // Only staff: public accounts (no role) see what anonymous visitors see.
+        if (auth('web')->user()?->isStaff()) {
             return true;
         }
 
