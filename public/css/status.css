@@ -877,7 +877,9 @@ a.bar {
     font-weight: 500;
 }
 
-.form input[type=email] {
+.form input[type=email],
+.form input[type=password],
+.form input[type=text] {
     display: block;
     width: 100%;
     margin-top: .3rem;
@@ -889,7 +891,9 @@ a.bar {
     font: inherit;
 }
 
-.form input[type=email]:focus-visible {
+.form input[type=email]:focus-visible,
+.form input[type=password]:focus-visible,
+.form input[type=text]:focus-visible {
     outline: 3px solid color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
@@ -903,7 +907,8 @@ a.bar {
     accent-color: var(--primary);
 }
 
-.form button {
+.form button,
+.form a.button {
     align-self: flex-start;
     padding: .55rem 1.25rem;
     border: 0;
@@ -925,7 +930,12 @@ a.bar {
     color: var(--text);
 }
 
+.form a.button {
+    text-decoration: none;
+}
+
 .form button.google,
+.form a.button.google,
 .form button.telegram {
     display: inline-flex;
     align-items: center;
@@ -933,7 +943,8 @@ a.bar {
     font-weight: 500;
 }
 
-.form button.google {
+.form button.google,
+.form a.button.google {
     border: 1px solid #747775;
     background: #fff;
     color: #1f1f1f;
@@ -945,6 +956,7 @@ a.bar {
 }
 
 .form button.google svg,
+.form a.button.google svg,
 .form button.telegram svg {
     width: 18px;
     height: 18px;

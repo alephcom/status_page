@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\AccountAuthController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\StatusController;
@@ -25,6 +27,28 @@ Route::middleware(SetLocale::class)->group(function () {
     Route::put('/subscription/{subscriber}', [SubscriptionController::class, 'update'])->name('subscription.update');
     Route::delete('/subscription/{subscriber}', [SubscriptionController::class, 'destroy'])->name('subscription.destroy');
     Route::get('/subscription/{subscriber}/verify', [SubscriptionController::class, 'verify'])->name('subscription.verify');
+
+    // Public accounts: sign in to manage your own subscription.
+    Route::middleware('guest')->group(function () {
+        Route::get('/login', [AccountAuthController::class, 'showLogin'])->name('login');
+        Route::post('/login', [AccountAuthController::class, 'login'])->middleware('throttle:10,1')->name('login.store');
+        Route::get('/register', [AccountAuthController::class, 'showRegister'])->name('register');
+        Route::post('/register', [AccountAuthController::class, 'register'])->middleware('throttle:5,1')->name('register.store');
+        Route::get('/forgot-password', [AccountAuthController::class, 'showForgot'])->name('password.request');
+        Route::post('/forgot-password', [AccountAuthController::class, 'sendResetLink'])->middleware('throttle:5,1')->name('password.email');
+        Route::get('/reset-password/{token}', [AccountAuthController::class, 'showReset'])->name('password.reset');
+        Route::post('/reset-password', [AccountAuthController::class, 'reset'])->middleware('throttle:10,1')->name('password.update');
+    });
+
+    Route::middleware('auth')->group(function () {
+        Route::post('/logout', [AccountAuthController::class, 'logout'])->name('logout');
+        Route::get('/account', [AccountController::class, 'show'])->name('account');
+        Route::put('/account/subscription', [AccountController::class, 'updateSubscription'])->name('account.subscription.update');
+        Route::delete('/account/subscription', [AccountController::class, 'destroySubscription'])->name('account.subscription.destroy');
+        Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
+        Route::get('/account/verify/{id}/{hash}', [AccountAuthController::class, 'verify'])->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
+        Route::post('/account/verify', [AccountAuthController::class, 'resendVerification'])->middleware('throttle:3,1')->name('verification.send');
+    });
 });
 
 Route::get('/health', HealthController::class)->name('health');
