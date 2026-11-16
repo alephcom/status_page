@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Components;
 use App\Enums\ComponentStatus;
 use App\Enums\ComponentVisibility;
 use App\Filament\Concerns\AdminOnly;
+use App\Filament\Resources\Incidents\IncidentResource;
 use App\Filament\Support\ZabbixLookup;
 use App\Models\Component;
 use App\Services\MetricPoller;
@@ -192,7 +193,11 @@ class ComponentResource extends Resource
                 TextColumn::make('group.name')->label('Group')->sortable(),
                 TextColumn::make('status')->badge(),
                 TextColumn::make('auto_status')->label('Monitoring')->badge()->toggleable(),
-                TextColumn::make('active_problems_count')->counts('activeProblems')->label('Problems'),
+                TextColumn::make('active_problems_count')->counts('activeProblems')->label('Problems')
+                    ->color(fn (int $state) => $state ? 'danger' : null)
+                    ->tooltip(fn (Component $record) => $record->active_problems_count
+                        ? $record->activeProblems()->limit(10)->pluck('name')->implode("\n")
+                        : null),
                 TextColumn::make('sources_count')->counts('sources')->label('Sources')->toggleable(),
                 TextColumn::make('visibility')->badge()->color(fn ($state) => $state === ComponentVisibility::Private ? 'warning' : 'gray')
                     ->formatStateUsing(fn ($state) => $state === ComponentVisibility::Private ? 'Private' : 'Public')->toggleable(),
@@ -205,6 +210,12 @@ class ComponentResource extends Resource
             ->recordActions([
                 self::testAction(),
                 self::testMetricsAction(),
+                Action::make('draftIncident')
+                    ->label('Draft incident')
+                    ->icon(Heroicon::OutlinedSparkles)
+                    ->color('gray')
+                    ->visible(fn (Component $record) => $record->active_problems_count > 0)
+                    ->url(fn (Component $record) => IncidentResource::createUrlFor([$record->id], draft: true)),
                 EditAction::make(),
             ]);
     }
@@ -289,6 +300,11 @@ class ComponentResource extends Resource
         }
 
         return ($state['driver'] ?? 'source').($parts ? ' – '.implode('; ', $parts) : '');
+    }
+
+    public static function getRelations(): array
+    {
+        return [RelationManagers\ProblemsRelationManager::class];
     }
 
     public static function getPages(): array

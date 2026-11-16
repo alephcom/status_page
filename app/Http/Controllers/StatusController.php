@@ -24,7 +24,9 @@ class StatusController extends Controller
     {
         $view = in_array($request->query('view'), ['compact', 'micro'], true) ? $request->query('view') : 'normal';
 
-        return view('status.index', $data->build(Visibility::canSeePrivate($request)) + ['view' => $view]);
+        $staff = (bool) $request->user('web')?->isStaff();
+
+        return view('status.index', $data->build(Visibility::canSeePrivate($request), $staff) + ['view' => $view]);
     }
 
     public function incident(Request $request, Incident $incident): View

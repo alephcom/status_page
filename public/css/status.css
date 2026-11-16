@@ -1033,3 +1033,32 @@ a.bar {
 .is-incident-monitoring {
     --c: var(--maint);
 }
+
+/* Staff-only list of the monitoring problems behind a component. */
+.problems {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    font-size: 0.85em;
+}
+.problems-head {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    color: var(--muted);
+}
+.problems-head a {
+    margin-left: auto;
+}
+.problems ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+.problems li {
+    margin: 2px 0;
+}
+.problems li.sev-4,
+.problems li.sev-5 {
+    font-weight: 600;
+}
