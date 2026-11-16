@@ -13,6 +13,7 @@ Inspired by [ChalmersLibrary/zabbix-public-statuspage](https://github.com/Chalme
   - **scheduled updates**, posted automatically at a set time;
   - **post-incident reviews** published on the incident page;
   - optional **AI drafting** with Claude. See [Incident tools](#incident-tools).
+- **What's failing.** Staff see the active Zabbix problems behind each component: on the dashboard, on the component's page in the admin panel, and under the component on the public page when signed in. Visitors and accounts without a role never see them. **Draft incident** opens a new hidden incident for those components, written by Claude from the problems if AI drafting is on.
 - **Automatic drafts from Zabbix.** When a component goes into a major outage, a hidden draft can be opened. When monitoring recovers, the draft resolves itself, or a published incident is flagged for you to resolve.
 - **Planned maintenance** managed in the app. Affected components show "Under maintenance" during the window. Subscribers get a reminder and start/end notices. Windows can repeat daily, weekly or monthly.
 - **Uptime history.** 90-day bars per component, computed from a local status-change log.

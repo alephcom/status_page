@@ -20,8 +20,13 @@ class StatusPageData
 {
     public function __construct(private readonly UptimeCalculator $uptime) {}
 
-    /** @return array<string, mixed> */
-    public function build(bool $private = false): array
+    /**
+     * $staff adds the raw monitoring problems behind each component; those
+     * name internal hosts and checks, so only signed-in staff get them.
+     *
+     * @return array<string, mixed>
+     */
+    public function build(bool $private = false, bool $staff = false): array
     {
         $days = (int) config('statuspage.uptime_days');
         $since = CarbonImmutable::today()->subDays($days - 1)->toDateString();
@@ -33,6 +38,7 @@ class StatusPageData
                 'dailyStatus' => fn ($q) => $q->where('date', '>=', $since),
                 'metrics' => fn ($q) => $q->where('enabled', true),
                 'metrics.points' => fn ($q) => $q->where('recorded_at', '>=', $metricsSince)->orderBy('recorded_at'),
+                ...($staff ? ['activeProblems'] : []),
             ])
             ->orderBy('order')->orderBy('name')
             ->get();
@@ -77,6 +83,7 @@ class StatusPageData
             'uptimeDays' => $days,
             'stale' => $this->staleness(),
             'generatedAt' => now(),
+            'showProblems' => $staff,
         ];
     }
 

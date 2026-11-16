@@ -11,6 +11,7 @@ use App\Enums\IncidentStatus;
 use App\Models\Component;
 use App\Models\Incident;
 use App\Models\IncidentTemplate;
+use App\Models\ZabbixProblem;
 use App\Services\IncidentManager;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -20,6 +21,7 @@ use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -93,12 +95,20 @@ class IncidentResource extends Resource
                 Select::make('component_ids')->label('Components')
                     ->multiple()
                     ->options(fn () => Component::query()->orderBy('name')->pluck('name', 'id'))
+                    ->default(fn () => self::componentIdsFromQuery())
+                    ->live()
                     ->searchable(),
                 Select::make('component_status')->label('Set their status to')
                     ->options(collect(ComponentStatus::cases())->reject(fn ($s) => $s === ComponentStatus::Operational)
                         ->mapWithKeys(fn ($s) => [$s->value => $s->getLabel()]))
                     ->placeholder('Leave to monitoring')
                     ->helperText('Applies while the incident is open; the worst of this and monitoring wins.'),
+                TextEntry::make('monitoring_problems')->label('Monitoring problems')
+                    ->visibleOn('create')
+                    ->state(fn (Get $get) => self::problemsSummary($get('component_ids') ?? []))
+                    ->markdown()
+                    ->helperText('Internal: not shown publicly. Claude drafts from these.')
+                    ->columnSpanFull(),
             ]),
             MarkdownEditor::make('message')->label('First update')->required()->visibleOn('create')
                 ->default('We are investigating reports of a problem.')
@@ -125,21 +135,95 @@ class IncidentResource extends Resource
             ->icon(Heroicon::OutlinedSparkles)
             ->visible(fn () => app(IncidentWriter::class)->enabled())
             ->action(function (Get $get, Set $set) {
-                $components = Component::query()->whereIn('id', array_map('intval', $get('component_ids') ?? []))->get();
-
-                try {
-                    $draft = app(IncidentWriter::class)->draftIncident(IncidentContext::forComponents($components, $get('title')));
-                } catch (AiException $e) {
-                    Notification::make()->danger()->title('No draft')->body($e->getMessage())->send();
-
+                if (! $draft = self::draftFor($get('component_ids') ?? [], $get('title'))) {
                     return;
                 }
 
                 $set('title', $draft['title']);
                 $set('message', $draft['message']);
-                $set('impact', IncidentImpact::tryFrom($draft['impact']) ?? IncidentImpact::Minor);
-                Notification::make()->success()->title('Draft written')->body('Check it before saving: it is based on the selected components and their monitoring problems.')->send();
+                $set('impact', $draft['impact']);
             });
+    }
+
+    /**
+     * Ask Claude for a first draft from the components' active monitoring
+     * problems. Reports the outcome as a notification; null on failure.
+     *
+     * @param  array<int|string>  $componentIds
+     * @return array{title: string, message: string, impact: IncidentImpact}|null
+     */
+    public static function draftFor(array $componentIds, ?string $notes = null): ?array
+    {
+        $components = Component::query()->whereIn('id', array_map('intval', $componentIds))->get();
+
+        try {
+            $draft = app(IncidentWriter::class)->draftIncident(IncidentContext::forComponents($components, $notes));
+        } catch (AiException $e) {
+            Notification::make()->danger()->title('No draft')->body($e->getMessage())->send();
+
+            return null;
+        }
+
+        Notification::make()->success()->title('Draft written')->body('Check it before saving: it is based on the selected components and their monitoring problems.')->send();
+
+        return [
+            'title' => $draft['title'],
+            'message' => $draft['message'],
+            'impact' => IncidentImpact::tryFrom($draft['impact']) ?? IncidentImpact::Minor,
+        ];
+    }
+
+    /**
+     * Link to a new incident for these components; with $draft, Claude
+     * writes the first draft as the form opens.
+     *
+     * @param  iterable<int>  $componentIds
+     */
+    public static function createUrlFor(iterable $componentIds, bool $draft = false): string
+    {
+        $ids = collect($componentIds)->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+        return self::getUrl('create', array_filter([
+            'components' => $ids ? implode(',', $ids) : null,
+            'draft' => $draft && app(IncidentWriter::class)->enabled() ? 1 : null,
+        ]));
+    }
+
+    /** @return list<int> */
+    public static function componentIdsFromQuery(): array
+    {
+        $raw = (string) request()->query('components', '');
+        $ids = array_values(array_filter(array_map('intval', explode(',', $raw))));
+
+        return $ids ? Component::query()->whereIn('id', $ids)->pluck('id')->all() : [];
+    }
+
+    /** @param array<int|string> $componentIds */
+    public static function problemsSummary(array $componentIds): string
+    {
+        if ($componentIds === []) {
+            return '_Pick components to see what monitoring reports for them._';
+        }
+
+        $components = Component::query()->whereIn('id', array_map('intval', $componentIds))
+            ->with('activeProblems')->orderBy('name')->get();
+
+        $lines = [];
+        foreach ($components as $c) {
+            foreach ($c->activeProblems as $p) {
+                $lines[] = self::problemLine($c->name, $p);
+            }
+        }
+
+        return $lines ? implode("\n", $lines) : '_No active monitoring problems on the selected components._';
+    }
+
+    private static function problemLine(string $component, ZabbixProblem $p): string
+    {
+        $escape = fn (string $s) => addcslashes($s, '\\`*_[]<>#|');
+
+        return '- **'.$escape($component).'**: '.$escape($p->name)
+            .' ('.$p->severityLabel().', since '.$p->started_at->diffForHumans().')';
     }
 
     public static function draftPostmortemAction(): Action
