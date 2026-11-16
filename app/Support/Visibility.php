@@ -22,7 +22,7 @@ class Visibility
     {
         $request ??= request();
 
-        if (auth('web')->check()) {
+        if (auth('web')->user()?->isStaff()) {
             return true;
         }
 
