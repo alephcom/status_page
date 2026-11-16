@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\Permission;
 use App\Models\User;
 use BackedEnum;
 use Carbon\Carbon;
@@ -45,12 +46,12 @@ class ManageApiTokens extends Page implements HasTable
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->role !== null;
+        return (bool) auth()->user()?->allows(Permission::ManageOwnApiTokens);
     }
 
     private function isAdmin(): bool
     {
-        return (bool) auth()->user()?->isAdmin();
+        return (bool) auth()->user()?->allows(Permission::ManageAllApiTokens);
     }
 
     public function table(Table $table): Table

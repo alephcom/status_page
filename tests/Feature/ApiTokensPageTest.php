@@ -18,7 +18,7 @@ class ApiTokensPageTest extends TestCase
 
     private function user(UserRole $role): User
     {
-        return User::factory()->create(['role' => $role]);
+        return User::factory()->role($role)->create();
     }
 
     public function test_page_renders_for_editors_and_admins(): void

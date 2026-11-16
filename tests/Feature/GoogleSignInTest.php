@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\UserRole;
 use App\Models\Component;
 use App\Models\Subscriber;
 use App\Models\User;
@@ -111,7 +110,7 @@ class GoogleSignInTest extends TestCase
 
     public function test_staff_sign_in_to_the_admin_panel(): void
     {
-        $editor = User::factory()->create(['email' => 'Editor@Example.com', 'role' => UserRole::Editor]);
+        $editor = User::factory()->editor()->create(['email' => 'Editor@Example.com']);
         $this->googleUser('editor@example.com');
 
         $this->get('/auth/google/admin');
@@ -135,7 +134,7 @@ class GoogleSignInTest extends TestCase
 
     public function test_subscribing_with_google_never_signs_in_to_the_admin_panel(): void
     {
-        User::factory()->create(['email' => 'admin@example.com', 'role' => UserRole::Admin]);
+        User::factory()->admin()->create(['email' => 'admin@example.com']);
         $this->googleUser('admin@example.com');
 
         $this->post('/subscribe/google');

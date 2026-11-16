@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Enums\UserRole;
+use App\Enums\Permission;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\MonitoringAlert;
@@ -46,6 +46,6 @@ class MonitoringWatchdog
 
     private function notify(MonitoringAlert $alert): void
     {
-        Notification::send(User::query()->where('role', UserRole::Admin->value)->get(), $alert);
+        Notification::send(User::permission(Permission::ReceiveMonitoringAlerts->value)->get(), $alert);
     }
 }

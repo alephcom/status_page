@@ -21,18 +21,18 @@ class MakeAdmin extends Command
         $user = User::query()->where('email', $email)->first();
 
         if ($user) {
-            $user->update(['role' => UserRole::Admin]);
+            $user->setRole(UserRole::Admin);
             $this->info("{$email} is now an admin.");
 
             return self::SUCCESS;
         }
 
-        User::create([
+        $user = User::create([
             'email' => $email,
             'name' => $this->option('name') ?? text('Name', default: strstr($email, '@', true) ?: $email),
             'password' => $this->option('password') ?? password('Password', required: true),
-            'role' => UserRole::Admin,
         ]);
+        $user->setRole(UserRole::Admin);
 
         $this->info("Admin {$email} created. Sign in at ".url('/admin'));
 

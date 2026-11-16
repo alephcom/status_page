@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\Permission;
 use App\Models\Component;
 use App\Models\Incident;
 use App\Models\Maintenance;
@@ -22,7 +23,7 @@ class Visibility
     {
         $request ??= request();
 
-        if (auth('web')->user()?->isStaff()) {
+        if (auth('web')->user()?->allows(Permission::ViewPrivate)) {
             return true;
         }
 

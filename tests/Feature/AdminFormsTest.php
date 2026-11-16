@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Enums\ComponentStatus;
 use App\Enums\IncidentStatus;
-use App\Enums\UserRole;
 use App\Filament\Pages\ManageSettings;
 use App\Filament\Resources\Components\Pages\CreateComponent;
 use App\Filament\Resources\Components\Pages\EditComponent;
@@ -31,7 +30,7 @@ class AdminFormsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+        $this->actingAs(User::factory()->admin()->create());
     }
 
     public function test_create_component_with_zabbix_source(): void

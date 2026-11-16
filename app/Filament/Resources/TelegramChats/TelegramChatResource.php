@@ -2,7 +2,8 @@
 
 namespace App\Filament\Resources\TelegramChats;
 
-use App\Filament\Concerns\AdminOnly;
+use App\Enums\Permission;
+use App\Filament\Concerns\RequiresPermission;
 use App\Models\Setting;
 use App\Models\TelegramChat;
 use App\Telegram\TelegramClient;
@@ -26,7 +27,12 @@ use UnitEnum;
 
 class TelegramChatResource extends Resource
 {
-    use AdminOnly;
+    use RequiresPermission;
+
+    protected static function requiredPermission(): Permission
+    {
+        return Permission::ManageTelegram;
+    }
 
     protected static ?string $model = TelegramChat::class;
 

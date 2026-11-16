@@ -20,7 +20,7 @@ class WriteApiTest extends TestCase
     private function token(UserRole $role = UserRole::Editor): array
     {
 
-        $user = User::factory()->create(['role' => $role]);
+        $user = User::factory()->role($role)->create();
 
         return ['Authorization' => 'Bearer '.$user->createToken('ci')->plainTextToken];
     }

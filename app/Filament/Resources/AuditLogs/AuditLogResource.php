@@ -2,7 +2,8 @@
 
 namespace App\Filament\Resources\AuditLogs;
 
-use App\Filament\Concerns\AdminOnly;
+use App\Enums\Permission;
+use App\Filament\Concerns\RequiresPermission;
 use App\Models\AuditLog;
 use BackedEnum;
 use Filament\Actions\ViewAction;
@@ -19,7 +20,12 @@ use UnitEnum;
 /** Read-only history of changes made in the admin panel, over MCP and the API, and by the system. */
 class AuditLogResource extends Resource
 {
-    use AdminOnly;
+    use RequiresPermission;
+
+    protected static function requiredPermission(): Permission
+    {
+        return Permission::ViewAuditLog;
+    }
 
     protected static ?string $model = AuditLog::class;
 

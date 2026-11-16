@@ -2,9 +2,10 @@
 
 namespace App\Filament\Resources\Webhooks;
 
+use App\Enums\Permission;
 use App\Enums\WebhookEvent;
 use App\Enums\WebhookFormat;
-use App\Filament\Concerns\AdminOnly;
+use App\Filament\Concerns\RequiresPermission;
 use App\Jobs\SendWebhook;
 use App\Models\Webhook;
 use BackedEnum;
@@ -28,7 +29,12 @@ use UnitEnum;
 
 class WebhookResource extends Resource
 {
-    use AdminOnly;
+    use RequiresPermission;
+
+    protected static function requiredPermission(): Permission
+    {
+        return Permission::ManageWebhooks;
+    }
 
     protected static ?string $model = Webhook::class;
 

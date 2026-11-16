@@ -2,8 +2,9 @@
 
 namespace App\Filament\Resources\Users;
 
+use App\Enums\Permission;
 use App\Enums\UserRole;
-use App\Filament\Concerns\AdminOnly;
+use App\Filament\Concerns\RequiresPermission;
 use App\Models\User;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -22,7 +23,12 @@ use UnitEnum;
 
 class UserResource extends Resource
 {
-    use AdminOnly;
+    use RequiresPermission;
+
+    protected static function requiredPermission(): Permission
+    {
+        return Permission::ManageUsers;
+    }
 
     protected static ?string $model = User::class;
 
@@ -39,6 +45,10 @@ class UserResource extends Resource
                 ->default(UserRole::Editor)
                 // Admins cannot change their own role, so nobody locks themselves out.
                 ->disabled(fn (?User $record) => $record?->is(auth()->user()))
+                // Stored as a Spatie role, not a column.
+                ->formatStateUsing(fn (?User $record, $state) => $record ? $record->role : $state)
+                ->dehydrated(false)
+                ->saveRelationshipsUsing(fn (User $record, $state) => $record->setRole($state instanceof UserRole ? $state : UserRole::tryFrom((string) $state)))
                 ->helperText('Users sign in to manage their own subscription. Editors also manage incidents and maintenance; admins manage everything.'),
             TextInput::make('password')->password()->revealable()
                 ->required(fn (string $operation) => $operation === 'create')
@@ -50,6 +60,7 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with('roles'))
             ->columns([
                 TextColumn::make('name')->searchable(),
                 TextColumn::make('email')->searchable(),
@@ -62,8 +73,8 @@ class UserResource extends Resource
                     ->options(['user' => 'User', ...collect(UserRole::cases())->mapWithKeys(fn (UserRole $r) => [$r->value => $r->getLabel()])])
                     ->query(fn ($query, array $data) => match ($data['value'] ?? null) {
                         null, '' => $query,
-                        'user' => $query->whereNull('role'),
-                        default => $query->where('role', $data['value']),
+                        'user' => $query->whereDoesntHave('roles'),
+                        default => $query->role($data['value']),
                     }),
             ])
             ->recordActions([
@@ -75,7 +86,7 @@ class UserResource extends Resource
                     ->modalDescription(fn (User $record) => "{$record->email} will be able to manage everything, including users and settings.")
                     ->visible(fn (User $record) => ! $record->isAdmin())
                     ->action(function (User $record) {
-                        $record->update(['role' => UserRole::Admin]);
+                        $record->setRole(UserRole::Admin);
                         Notification::make()->title("{$record->email} is now an admin")->success()->send();
                     }),
                 EditAction::make(),

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Enums\ComponentStatus;
 use App\Enums\IncidentImpact;
 use App\Enums\IncidentStatus;
+use App\Enums\Permission;
 use App\Enums\Recurrence;
 use App\Http\Controllers\Controller;
 use App\Mcp\McpPayloads;
@@ -186,7 +187,7 @@ class ManageApiController extends Controller
 
     public function setOverride(Request $request, Component $component): JsonResponse
     {
-        abort_unless($this->user($request)->isAdmin(), 403, 'Only admins can override component status.');
+        abort_unless($this->user($request)->allows(Permission::OverrideComponents), 403, 'Only admins can override component status.');
 
         $v = $request->validate([
             'status' => ['required', 'string', Rule::in(['clear', ...array_column(ComponentStatus::cases(), 'value')])],

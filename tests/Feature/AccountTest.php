@@ -198,7 +198,7 @@ class AccountTest extends TestCase
 
     public function test_admins_can_make_a_user_admin(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Admin]);
+        $admin = User::factory()->admin()->create();
         $user = User::factory()->create();
 
         $this->actingAs($admin);
@@ -212,7 +212,7 @@ class AccountTest extends TestCase
 
     public function test_admins_can_change_roles_but_not_their_own(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Admin]);
+        $admin = User::factory()->admin()->create();
         $user = User::factory()->create();
         $this->actingAs($admin);
 
@@ -227,7 +227,7 @@ class AccountTest extends TestCase
 
     public function test_editors_and_users_cannot_manage_users(): void
     {
-        $this->actingAs(User::factory()->create(['role' => UserRole::Editor]))->get('/admin/users')->assertForbidden();
+        $this->actingAs(User::factory()->editor()->create())->get('/admin/users')->assertForbidden();
         $this->actingAs(User::factory()->create())->get('/admin/users')->assertForbidden();
     }
 }

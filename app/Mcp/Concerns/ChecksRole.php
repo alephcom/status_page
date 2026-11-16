@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Concerns;
 
+use App\Enums\Permission;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Laravel\Mcp\Request;
@@ -16,14 +17,14 @@ trait ChecksRole
     /** Hide the tool from non-admins in tools/list. */
     public function shouldRegister(): bool
     {
-        return (bool) auth()->user()?->isAdmin();
+        return (bool) auth()->user()?->allows(Permission::OverrideComponents);
     }
 
     protected function requireAdmin(Request $request): User
     {
         $user = $request->user();
 
-        if (! $user instanceof User || ! $user->isAdmin()) {
+        if (! $user instanceof User || ! $user->allows(Permission::OverrideComponents)) {
             throw new AuthorizationException('Only admins can do this.');
         }
 

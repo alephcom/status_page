@@ -3,7 +3,8 @@
 namespace App\Filament\Pages;
 
 use App\Ai\IncidentWriter;
-use App\Filament\Concerns\AdminOnly;
+use App\Enums\Permission;
+use App\Filament\Concerns\RequiresPermission;
 use App\Http\Middleware\SetLocale;
 use App\Models\Setting;
 use BackedEnum;
@@ -31,7 +32,12 @@ use UnitEnum;
  */
 class ManageSettings extends Page
 {
-    use AdminOnly;
+    use RequiresPermission;
+
+    protected static function requiredPermission(): Permission
+    {
+        return Permission::ManageSettings;
+    }
 
     protected string $view = 'filament.pages.manage-settings';
 

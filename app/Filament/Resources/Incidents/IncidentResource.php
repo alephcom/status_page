@@ -8,6 +8,8 @@ use App\Ai\IncidentWriter;
 use App\Enums\ComponentStatus;
 use App\Enums\IncidentImpact;
 use App\Enums\IncidentStatus;
+use App\Enums\Permission;
+use App\Filament\Concerns\RequiresPermission;
 use App\Models\Component;
 use App\Models\Incident;
 use App\Models\IncidentTemplate;
@@ -37,6 +39,13 @@ use UnitEnum;
 
 class IncidentResource extends Resource
 {
+    use RequiresPermission;
+
+    protected static function requiredPermission(): Permission
+    {
+        return Permission::ManageIncidents;
+    }
+
     protected static ?string $model = Incident::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedExclamationTriangle;

@@ -4,6 +4,8 @@ namespace App\Filament\Resources\IncidentTemplates;
 
 use App\Enums\ComponentStatus;
 use App\Enums\IncidentImpact;
+use App\Enums\Permission;
+use App\Filament\Concerns\RequiresPermission;
 use App\Models\Component;
 use App\Models\IncidentTemplate;
 use BackedEnum;
@@ -23,6 +25,13 @@ use UnitEnum;
 /** Presets for recurring problems; pick one when creating an incident (or pass template_id via the API). */
 class IncidentTemplateResource extends Resource
 {
+    use RequiresPermission;
+
+    protected static function requiredPermission(): Permission
+    {
+        return Permission::ManageIncidents;
+    }
+
     protected static ?string $model = IncidentTemplate::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentDuplicate;

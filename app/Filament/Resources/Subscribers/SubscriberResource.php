@@ -2,7 +2,8 @@
 
 namespace App\Filament\Resources\Subscribers;
 
-use App\Filament\Concerns\AdminOnly;
+use App\Enums\Permission;
+use App\Filament\Concerns\RequiresPermission;
 use App\Models\Subscriber;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -23,7 +24,12 @@ use UnitEnum;
 
 class SubscriberResource extends Resource
 {
-    use AdminOnly;
+    use RequiresPermission;
+
+    protected static function requiredPermission(): Permission
+    {
+        return Permission::ManageSubscribers;
+    }
 
     protected static ?string $model = Subscriber::class;
 

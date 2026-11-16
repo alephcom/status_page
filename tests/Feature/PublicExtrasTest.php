@@ -6,7 +6,7 @@ use App\Enums\ComponentStatus;
 use App\Enums\ComponentVisibility;
 use App\Enums\IncidentImpact;
 use App\Enums\IncidentStatus;
-use App\Enums\UserRole;
+use App\Enums\Permission;
 use App\Models\Component;
 use App\Models\ComponentMetric;
 use App\Models\Maintenance;
@@ -85,7 +85,7 @@ class PublicExtrasTest extends TestCase
         $this->getJson('/api/v1/components')->assertJsonCount(2, 'data');
 
         Setting::put('private_ip_ranges', []);
-        $this->actingAs(User::factory()->create(['role' => UserRole::Editor]));
+        $this->actingAs(User::factory()->editor()->create());
         $this->get('/')->assertSee('Build farm');
         $this->get(route('incidents.show', $incident))->assertOk();
     }
@@ -96,13 +96,25 @@ class PublicExtrasTest extends TestCase
         $internal = Component::create(['name' => 'Build farm', 'visibility' => ComponentVisibility::Private]);
         $incident = app(IncidentManager::class)->create(['title' => 'Builds failing', 'status' => IncidentStatus::Investigating, 'impact' => IncidentImpact::Major], [$internal->id], 'x');
 
-        $this->actingAs(User::factory()->create(['role' => null]));
+        $this->actingAs(User::factory()->create());
 
         $this->get('/')->assertOk()->assertSee('Portal')->assertDontSee('Build farm')->assertDontSee('Builds failing');
         $this->get(route('incidents.show', $incident))->assertNotFound();
         $this->getJson('/api/v1/components')->assertJsonCount(1, 'data');
         $this->getJson('/api/v1/status')->assertJsonCount(0, 'active_incidents');
         $this->get(route('feed'))->assertOk()->assertDontSee('Builds failing');
+    }
+
+    public function test_seeing_private_components_follows_the_permission_not_the_role(): void
+    {
+        Component::create(['name' => 'Build farm', 'visibility' => ComponentVisibility::Private]);
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $this->get('/')->assertDontSee('Build farm');
+
+        $user->givePermissionTo(Permission::ViewPrivate->value);
+        $this->get('/')->assertSee('Build farm');
     }
 
     public function test_announcement_branding_and_footer_links(): void

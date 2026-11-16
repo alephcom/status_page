@@ -35,7 +35,7 @@ class McpServerTest extends TestCase
 
     private function user(UserRole $role = UserRole::Editor): User
     {
-        return User::factory()->create(['role' => $role]);
+        return User::factory()->role($role)->create();
     }
 
     // --- Read tools ---

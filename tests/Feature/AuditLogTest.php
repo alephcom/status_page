@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Enums\IncidentImpact;
 use App\Enums\IncidentStatus;
-use App\Enums\UserRole;
 use App\Models\AuditLog;
 use App\Models\Component;
 use App\Models\Setting;
@@ -20,7 +19,7 @@ class AuditLogTest extends TestCase
 
     public function test_changes_are_recorded_with_user_and_diff(): void
     {
-        $user = User::factory()->create(['role' => UserRole::Admin]);
+        $user = User::factory()->admin()->create();
         $this->actingAs($user);
 
         $incident = app(IncidentManager::class)->create(['title' => 'Slow', 'status' => IncidentStatus::Investigating, 'impact' => IncidentImpact::Minor], [], 'Hmm.', $user);

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\UserRole;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,7 +14,7 @@ class AdminPanelTest extends TestCase
     public function test_admin_pages_render(): void
     {
         $this->seed(DemoSeeder::class);
-        $admin = User::factory()->create(['role' => UserRole::Admin]);
+        $admin = User::factory()->admin()->create();
 
         foreach (['/admin', '/admin/components', '/admin/components/create', '/admin/components/1/edit',
             '/admin/component-groups', '/admin/incidents', '/admin/incidents/create', '/admin/incidents/1/edit',
@@ -27,7 +26,7 @@ class AdminPanelTest extends TestCase
 
     public function test_editors_cannot_reach_admin_only_areas(): void
     {
-        $editor = User::factory()->create(['role' => UserRole::Editor]);
+        $editor = User::factory()->editor()->create();
 
         $this->actingAs($editor)->get('/admin/incidents')->assertOk();
         $this->actingAs($editor)->get('/admin/maintenances')->assertOk();

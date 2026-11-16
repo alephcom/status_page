@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Permission;
 use App\Models\Setting;
 use App\Services\SlaReport;
 use Carbon\CarbonImmutable;
@@ -13,7 +14,7 @@ class SlaPrintController extends Controller
 {
     public function __invoke(Request $request, SlaReport $report): View
     {
-        abort_unless($request->user()?->role !== null, 403);
+        abort_unless((bool) $request->user()?->allows(Permission::ViewSlaReports), 403);
 
         $month = preg_match('/^\d{4}-\d{2}$/', (string) $request->query('month'))
             ? CarbonImmutable::createFromFormat('!Y-m', $request->query('month'))

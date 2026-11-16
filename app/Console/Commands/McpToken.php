@@ -15,7 +15,7 @@ class McpToken extends Command
     {
         $user = User::query()->where('email', $this->argument('email'))->first();
 
-        if (! $user || $user->role === null) {
+        if (! $user || ! $user->isStaff()) {
             $this->error('No admin or editor with that e-mail.');
 
             return self::FAILURE;
@@ -32,7 +32,7 @@ class McpToken extends Command
 
         $token = $user->createToken($name)->plainTextToken;
 
-        $this->info("Token for {$user->email} ({$user->role->value}). It is shown only once:");
+        $this->info("Token for {$user->email} ({$user->role?->value}). It is shown only once:");
         $this->line($token);
         $this->newLine();
         $this->line('Endpoint: '.url('/mcp').'  Header: Authorization: Bearer <token>');

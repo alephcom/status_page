@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\UserRole;
 use App\Models\AuditLog;
 use App\Models\Component;
 use App\Models\ComponentStatusChange;
@@ -42,8 +41,8 @@ class OperationsTest extends TestCase
     public function test_watchdog_alerts_admins_once_and_on_recovery(): void
     {
         Notification::fake();
-        $admin = User::factory()->create(['role' => UserRole::Admin]);
-        $editor = User::factory()->create(['role' => UserRole::Editor]);
+        $admin = User::factory()->admin()->create();
+        $editor = User::factory()->editor()->create();
         Component::create(['name' => 'Portal'])->sources()->create(['driver' => 'zabbix_host', 'config' => ['hosts' => ['a']]]);
         Setting::putMany(['zabbix_last_ok_at' => now()->subMinutes(20)->toIso8601String(), 'zabbix_last_error' => 'timeout']);
 

@@ -2,7 +2,8 @@
 
 namespace App\Filament\Resources\ComponentGroups;
 
-use App\Filament\Concerns\AdminOnly;
+use App\Enums\Permission;
+use App\Filament\Concerns\RequiresPermission;
 use App\Models\ComponentGroup;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
@@ -20,7 +21,12 @@ use UnitEnum;
 
 class ComponentGroupResource extends Resource
 {
-    use AdminOnly;
+    use RequiresPermission;
+
+    protected static function requiredPermission(): Permission
+    {
+        return Permission::ManageComponents;
+    }
 
     protected static ?string $model = ComponentGroup::class;
 

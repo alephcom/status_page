@@ -4,7 +4,8 @@ namespace App\Filament\Resources\Components;
 
 use App\Enums\ComponentStatus;
 use App\Enums\ComponentVisibility;
-use App\Filament\Concerns\AdminOnly;
+use App\Enums\Permission;
+use App\Filament\Concerns\RequiresPermission;
 use App\Filament\Support\ZabbixLookup;
 use App\Models\Component;
 use App\Services\MetricPoller;
@@ -35,7 +36,12 @@ use UnitEnum;
 
 class ComponentResource extends Resource
 {
-    use AdminOnly;
+    use RequiresPermission;
+
+    protected static function requiredPermission(): Permission
+    {
+        return Permission::ManageComponents;
+    }
 
     protected static ?string $model = Component::class;
 

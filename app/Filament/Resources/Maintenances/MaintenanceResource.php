@@ -3,7 +3,9 @@
 namespace App\Filament\Resources\Maintenances;
 
 use App\Enums\MaintenanceStatus;
+use App\Enums\Permission;
 use App\Enums\Recurrence;
+use App\Filament\Concerns\RequiresPermission;
 use App\Models\Maintenance;
 use App\Services\MaintenanceManager;
 use BackedEnum;
@@ -25,6 +27,13 @@ use UnitEnum;
 
 class MaintenanceResource extends Resource
 {
+    use RequiresPermission;
+
+    protected static function requiredPermission(): Permission
+    {
+        return Permission::ManageMaintenance;
+    }
+
     protected static ?string $model = Maintenance::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedWrenchScrewdriver;

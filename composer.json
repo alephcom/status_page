@@ -13,7 +13,8 @@
         "laravel/mcp": "^1.2",
         "laravel/sanctum": "^4.4",
         "laravel/socialite": "^5.32",
-        "laravel/tinker": "^3.0"
+        "laravel/tinker": "^3.0",
+        "spatie/laravel-permission": "^8.5"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

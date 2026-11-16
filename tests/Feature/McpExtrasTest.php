@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\UserRole;
 use App\Mcp\Servers\StatusPageServer;
 use App\Mcp\Tools\CreateIncident;
 use App\Mcp\Tools\ListIncidentTemplates;
@@ -22,7 +21,7 @@ class McpExtrasTest extends TestCase
 
     private function editor(): User
     {
-        return User::factory()->create(['role' => UserRole::Editor]);
+        return User::factory()->editor()->create();
     }
 
     public function test_templates(): void

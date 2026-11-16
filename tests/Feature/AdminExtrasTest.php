@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Ai\IncidentWriter;
 use App\Enums\IncidentImpact;
 use App\Enums\IncidentStatus;
-use App\Enums\UserRole;
 use App\Filament\Pages\ManageSettings;
 use App\Filament\Pages\SlaReportPage;
 use App\Filament\Resources\Components\Pages\EditComponent;
@@ -35,7 +34,7 @@ class AdminExtrasTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->admin = User::factory()->create(['role' => UserRole::Admin]);
+        $this->admin = User::factory()->admin()->create();
         $this->actingAs($this->admin);
     }
 
@@ -49,7 +48,7 @@ class AdminExtrasTest extends TestCase
             $this->get($url)->assertOk();
         }
 
-        $editor = User::factory()->create(['role' => UserRole::Editor]);
+        $editor = User::factory()->editor()->create();
         $this->actingAs($editor)->get('/admin/audit-logs')->assertForbidden();
         $this->actingAs($editor)->get('/admin/incident-templates')->assertOk();
     }

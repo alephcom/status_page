@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\Permission;
 use App\Services\SlaReport;
 use BackedEnum;
 use Carbon\CarbonImmutable;
@@ -30,7 +31,7 @@ class SlaReportPage extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->role !== null;
+        return (bool) auth()->user()?->allows(Permission::ViewSlaReports);
     }
 
     public function mount(): void

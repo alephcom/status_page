@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Enums\IncidentImpact;
 use App\Enums\IncidentStatus;
-use App\Enums\UserRole;
 use App\Filament\Resources\TelegramChats\Pages\CreateTelegramChat;
 use App\Jobs\SendTelegramMessage;
 use App\Models\Component;
@@ -201,7 +200,7 @@ class TelegramTest extends TestCase
 
     public function test_admin_adds_a_channel_and_a_test_message_is_sent(): void
     {
-        $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+        $this->actingAs(User::factory()->admin()->create());
 
         Livewire::test(CreateTelegramChat::class)
             ->fillForm(['chat_id' => '@ops_status'])
@@ -217,8 +216,8 @@ class TelegramTest extends TestCase
 
     public function test_editors_cannot_manage_telegram_chats(): void
     {
-        $this->actingAs(User::factory()->create(['role' => UserRole::Editor]))->get('/admin/telegram-chats')->assertForbidden();
-        $this->actingAs(User::factory()->create(['role' => UserRole::Admin]))->get('/admin/telegram-chats')->assertOk();
+        $this->actingAs(User::factory()->editor()->create())->get('/admin/telegram-chats')->assertForbidden();
+        $this->actingAs(User::factory()->admin()->create())->get('/admin/telegram-chats')->assertOk();
     }
 
     public function test_setup_command_registers_the_webhook(): void
